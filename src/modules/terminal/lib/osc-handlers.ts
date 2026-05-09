@@ -40,7 +40,13 @@ function parseOsc7(data: string): string | null {
   const m = data.match(/^file:\/\/[^/]*(\/.*)$/);
   if (!m) return null;
   try {
-    return decodeURIComponent(m[1]);
+    let p = decodeURIComponent(m[1]);
+    // Windows file URIs produce /C:/… — strip the leading slash so the
+    // result is a valid Windows path (C:\…).
+    if (/^\/[A-Za-z]:/.test(p)) {
+      p = p.slice(1).replace(/\//g, "\\");
+    }
+    return p;
   } catch {
     return m[1];
   }

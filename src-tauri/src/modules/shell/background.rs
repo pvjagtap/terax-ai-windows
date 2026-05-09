@@ -105,9 +105,22 @@ pub fn spawn(command: String, cwd: Option<String>) -> Result<Arc<BackgroundProc>
         }
     }
 
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+    #[cfg(target_os = "windows")]
+    let (shell, args) = {
+        let comspec = std::env::var("COMSPEC")
+            .unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".into());
+        (comspec, vec!["/C".to_string(), trimmed.clone()])
+    };
+    #[cfg(not(target_os = "windows"))]
+    let (shell, args) = {
+        let sh = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+        (sh, vec!["-lc".to_string(), trimmed.clone()])
+    };
+
     let mut cmd = Command::new(&shell);
-    cmd.arg("-lc").arg(&trimmed);
+    for arg in &args {
+        cmd.arg(arg);
+    }
     if let Some(ref dir) = cwd {
         cmd.current_dir(dir);
     }

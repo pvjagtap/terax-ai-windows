@@ -32,6 +32,10 @@ async fn open_settings_window(app: tauri::AppHandle, tab: Option<String>) -> Res
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         .hidden_title(true);
 
+    // On Windows, use the default decorated window (standard title bar).
+    // The main window already uses Overlay in tauri.conf.json which Tauri
+    // maps to the native Windows caption on Win10/11.
+
     // On Linux we render our own titlebar + rounded shell, so drop the
     // native chrome and make the window transparent.
     #[cfg(target_os = "linux")]
@@ -65,6 +69,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(pty::PtyState::default())
         .manage(shell::ShellState::default())
         .manage(secrets::SecretsState::default())

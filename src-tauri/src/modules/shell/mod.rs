@@ -84,10 +84,22 @@ fn run_blocking(
     cwd: Option<PathBuf>,
     dur: Duration,
 ) -> Result<CommandOutput, String> {
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+    #[cfg(target_os = "windows")]
+    let (shell, args) = {
+        let comspec = std::env::var("COMSPEC")
+            .unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".into());
+        (comspec, vec!["/C".to_string(), command.clone()])
+    };
+    #[cfg(not(target_os = "windows"))]
+    let (shell, args) = {
+        let sh = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+        (sh, vec!["-lc".to_string(), command.clone()])
+    };
 
     let mut cmd = Command::new(&shell);
-    cmd.arg("-lc").arg(&command);
+    for arg in &args {
+        cmd.arg(arg);
+    }
     if let Some(dir) = cwd {
         cmd.current_dir(dir);
     }
@@ -172,9 +184,20 @@ pub fn shell_session_open(
             }
             p
         }
-        None => std::env::var("HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("/")),
+        None => {
+            #[cfg(target_os = "windows")]
+            let home_var = "USERPROFILE";
+            #[cfg(not(target_os = "windows"))]
+            let home_var = "HOME";
+            std::env::var(home_var)
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| {
+                    #[cfg(target_os = "windows")]
+                    { PathBuf::from(r"C:\") }
+                    #[cfg(not(target_os = "windows"))]
+                    { PathBuf::from("/") }
+                })
+        }
     };
     let session = Arc::new(ShellSession::new(initial));
     let id = state.next_session_id.fetch_add(1, Ordering::Relaxed);

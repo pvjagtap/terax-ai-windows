@@ -10,7 +10,11 @@ export async function copyToClipboard(text: string): Promise<void> {
 
 export function relativePath(rootPath: string, path: string): string {
   if (path === rootPath) return ".";
-  if (path.startsWith(`${rootPath}/`)) return path.slice(rootPath.length + 1);
+  // Normalize separators for cross-platform comparison.
+  const norm = (p: string) => p.replace(/\\/g, "/");
+  const nRoot = norm(rootPath);
+  const nPath = norm(path);
+  if (nPath.startsWith(`${nRoot}/`)) return nPath.slice(nRoot.length + 1);
   return path;
 }
 

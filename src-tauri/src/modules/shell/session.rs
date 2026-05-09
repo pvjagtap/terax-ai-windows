@@ -60,6 +60,11 @@ impl ShellSession {
 
         // Append a cwd-reporting tail. Run with `set +e` semantics by
         // capturing $? right after the command, then printing the sentinel.
+        #[cfg(target_os = "windows")]
+        let wrapped = format!(
+            "{trimmed} & echo. & echo {CWD_SENTINEL}%CD% & exit /b %ERRORLEVEL%\n",
+        );
+        #[cfg(not(target_os = "windows"))]
         let wrapped = format!(
             "{trimmed}\n__terax_rc=$?\nprintf '\\n%s%s\\n' '{CWD_SENTINEL}' \"$(pwd)\"\nexit $__terax_rc\n",
         );

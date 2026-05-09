@@ -49,7 +49,7 @@ export type TabPatch = Partial<{
 }>;
 
 function basename(path: string): string {
-  const parts = path.split("/").filter(Boolean);
+  const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);
   return parts.length ? parts[parts.length - 1] : path;
 }
 

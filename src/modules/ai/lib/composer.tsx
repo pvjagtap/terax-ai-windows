@@ -181,7 +181,7 @@ export function AiComposerProvider({ children }: ProviderProps) {
         console.warn("attachFileByPath: skipped non-text file", path, result);
         return;
       }
-      const name = path.split("/").pop() || path;
+      const name = path.replace(/\\/g, "/").split("/").pop() || path;
       const id = `path-${path}`;
       setFiles((prev) => {
         if (prev.some((f) => f.id === id)) return prev;

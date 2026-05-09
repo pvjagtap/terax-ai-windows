@@ -88,6 +88,40 @@ export function useTerminalSession({
       term.open(container.current);
       fit.fit();
 
+      // On Windows (and Linux), xterm.js intercepts Ctrl+C/V/A as browser
+      // clipboard/select-all by default. We need:
+      //  - Ctrl+C with NO selection → send \x03 (SIGINT) to the shell
+      //  - Ctrl+C with selection → allow browser copy
+      //  - Ctrl+V → paste from clipboard into terminal (via native paste event)
+      //  - Ctrl+Shift+C/V → always clipboard copy/paste
+      term.attachCustomKeyEventHandler((e) => {
+        // Only intercept keydown events.
+        if (e.type !== "keydown") return true;
+        const key = e.key.toLowerCase();
+
+        if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
+          if (key === "c") {
+            // If text is selected, let the browser copy it.
+            if (term.hasSelection()) return false;
+            // No selection — send SIGINT (\x03) to the shell.
+            return true;
+          }
+          if (key === "v") {
+            // Return false so xterm doesn't send \x16 to the shell.
+            // The browser will fire a native paste event which xterm.js
+            // handles automatically via its own paste listener.
+            return false;
+          }
+        }
+        // Ctrl+Shift+C → always copy (let browser handle)
+        if (e.ctrlKey && e.shiftKey && key === "c") return false;
+        // Ctrl+Shift+V → always paste (let browser handle)
+        if (e.ctrlKey && e.shiftKey && key === "v") return false;
+
+        // Let all other keys go to xterm.js → PTY.
+        return true;
+      });
+
       try {
         const webgl = new WebglAddon();
         webgl.onContextLoss(() => webgl.dispose());

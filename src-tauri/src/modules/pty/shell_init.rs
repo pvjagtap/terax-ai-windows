@@ -17,61 +17,121 @@
 // - PS1/PS0 markers are re-injected on every prompt in case the user's framework
 //   (powerlevel10k, starship) rebuilds the prompt string.
 
-use std::ffi::OsString;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+#[cfg(not(target_os = "windows"))]
+use std::ffi::OsString;
+#[cfg(not(target_os = "windows"))]
+use std::path::Path;
 
 use portable_pty::CommandBuilder;
 
 // Shell integration scripts live as real files under `scripts/` so editors can
 // lint/highlight them. `include_str!` inlines them at compile time, so the
 // runtime still ships a single binary.
+#[cfg(not(target_os = "windows"))]
 const ZSHENV: &str = include_str!("scripts/zshenv.zsh");
+#[cfg(not(target_os = "windows"))]
 const ZPROFILE: &str = include_str!("scripts/zprofile.zsh");
+#[cfg(not(target_os = "windows"))]
 const ZLOGIN: &str = include_str!("scripts/zlogin.zsh");
+#[cfg(not(target_os = "windows"))]
 const ZSHRC: &str = include_str!("scripts/zshrc.zsh");
+#[cfg(not(target_os = "windows"))]
 const BASHRC: &str = include_str!("scripts/bashrc.bash");
 
 pub enum Shell {
+    #[cfg(not(target_os = "windows"))]
     Zsh,
+    #[cfg(not(target_os = "windows"))]
     Bash,
+    #[cfg(target_os = "windows")]
+    PowerShell,
+    #[cfg(target_os = "windows")]
+    Cmd,
+    #[cfg(not(target_os = "windows"))]
     Other,
 }
 
 impl Shell {
     pub fn detect() -> (Shell, String) {
-        let path = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
-        let name = path.rsplit('/').next().unwrap_or("").to_string();
-        let shell = match name.as_str() {
-            "zsh" => Shell::Zsh,
-            "bash" => Shell::Bash,
-            _ => Shell::Other,
-        };
-        (shell, path)
+        #[cfg(target_os = "windows")]
+        {
+            // On Windows, prefer PowerShell (pwsh → powershell.exe fallback),
+            // then fall back to cmd.exe via COMSPEC.
+            if let Ok(pwsh) = which_windows("pwsh.exe") {
+                return (Shell::PowerShell, pwsh);
+            }
+            if let Ok(pwsh) = which_windows("powershell.exe") {
+                return (Shell::PowerShell, pwsh);
+            }
+            let comspec = std::env::var("COMSPEC")
+                .unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".into());
+            (Shell::Cmd, comspec)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let path = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
+            let name = path.rsplit('/').next().unwrap_or("").to_string();
+            let shell = match name.as_str() {
+                "zsh" => Shell::Zsh,
+                "bash" => Shell::Bash,
+                _ => Shell::Other,
+            };
+            (shell, path)
+        }
+    }
+}
+
+/// Resolve an executable name to its full path on Windows by searching PATH.
+#[cfg(target_os = "windows")]
+fn which_windows(name: &str) -> Result<String, String> {
+    let path_var = std::env::var("PATH").unwrap_or_default();
+    for dir in path_var.split(';') {
+        let candidate = PathBuf::from(dir).join(name);
+        if candidate.is_file() {
+            return Ok(candidate.to_string_lossy().into_owned());
+        }
+    }
+    Err(format!("{name} not found in PATH"))
+}
+
+/// Return the user's home directory, cross-platform.
+fn home_dir() -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var_os("USERPROFILE").map(PathBuf::from)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::env::var_os("HOME").map(PathBuf::from)
     }
 }
 
 pub fn build_command(cwd: Option<String>) -> Result<CommandBuilder, String> {
     let (shell, shell_path) = Shell::detect();
     let mut cmd = CommandBuilder::new(&shell_path);
-    cmd.env("TERM", "xterm-256color");
-    cmd.env("COLORTERM", "truecolor");
     cmd.env("TERAX_TERMINAL", "1");
+
+    // TERM/COLORTERM are Unix conventions; skip on Windows where ConPTY
+    // handles terminal emulation natively.
+    #[cfg(not(target_os = "windows"))]
+    {
+        cmd.env("TERM", "xterm-256color");
+        cmd.env("COLORTERM", "truecolor");
+    }
 
     let resolved_cwd = cwd
         .map(PathBuf::from)
         .filter(|p| p.is_dir())
-        .or_else(|| {
-            std::env::var_os("HOME")
-                .map(PathBuf::from)
-                .filter(|p| p.is_dir())
-        })
+        .or_else(|| home_dir().filter(|p| p.is_dir()))
         .or_else(|| std::env::current_dir().ok());
     if let Some(cwd) = resolved_cwd {
         cmd.cwd(cwd);
     }
 
     match shell {
+        #[cfg(not(target_os = "windows"))]
         Shell::Zsh => {
             match prepare_zdotdir() {
                 Ok(zdotdir) => {
@@ -91,6 +151,7 @@ pub fn build_command(cwd: Option<String>) -> Result<CommandBuilder, String> {
             // Finder/Dock get a minimal PATH.
             cmd.arg("-l");
         }
+        #[cfg(not(target_os = "windows"))]
         Shell::Bash => {
             match prepare_bash_rcfile() {
                 Ok(rc) => {
@@ -106,6 +167,34 @@ pub fn build_command(cwd: Option<String>) -> Result<CommandBuilder, String> {
             // /etc/profile first.
             cmd.arg("-i");
         }
+        #[cfg(target_os = "windows")]
+        Shell::PowerShell => {
+            // -NoLogo: suppress the copyright banner
+            // -NoExit: keep the shell alive (interactive)
+            // Dot-source a tiny integration script that overrides `prompt` to
+            // emit OSC 7 (CWD) on each prompt. Written to disk once and cached.
+            cmd.arg("-NoLogo");
+            cmd.arg("-NoExit");
+            match prepare_powershell_profile() {
+                Ok(profile) => {
+                    cmd.arg("-Command");
+                    cmd.arg(format!(". '{}'", profile.to_string_lossy()));
+                }
+                Err(e) => {
+                    log::warn!("powershell shell integration disabled: {e}");
+                }
+            }
+        }
+        #[cfg(target_os = "windows")]
+        Shell::Cmd => {
+            // /Q: turn echo off, /K: execute then stay open (interactive)
+            // Set PROMPT to emit OSC 7 (CWD) before the normal prompt so the
+            // frontend file explorer can track directory changes.
+            cmd.arg("/Q");
+            cmd.arg("/K");
+            cmd.arg(r#"prompt $e]7;file:///%CD:\=/%%$e\$P$G"#);
+        }
+        #[cfg(not(target_os = "windows"))]
         Shell::Other => {
             log::info!(
                 "unsupported shell '{}', spawning without integration",
@@ -116,16 +205,45 @@ pub fn build_command(cwd: Option<String>) -> Result<CommandBuilder, String> {
     Ok(cmd)
 }
 
-fn integration_root() -> Result<PathBuf, String> {
-    let home = std::env::var("HOME").map_err(|_| "HOME not set".to_string())?;
-    let root = PathBuf::from(home)
-        .join(".cache")
-        .join("terax")
+#[cfg(target_os = "windows")]
+fn prepare_powershell_profile() -> Result<PathBuf, String> {
+    let home = home_dir().ok_or_else(|| "USERPROFILE not set".to_string())?;
+    let dir = home
+        .join("AppData")
+        .join("Local")
+        .join("Terax")
         .join("shell-integration");
+    fs::create_dir_all(&dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
+    let profile = dir.join("prompt.ps1");
+    // Only rewrite if content differs (avoids disk churn).
+    let content = concat!(
+        "function global:prompt {\n",
+        "  $esc = [char]27\n",
+        "  $p = $executionContext.SessionState.Path.CurrentLocation.Path\n",
+        "  $u = 'file:///' + ($p -replace '\\\\','/')\n",
+        "  \"${esc}]7;${u}${esc}\\PS ${p}> \"\n",
+        "}\n",
+    );
+    if profile.is_file() {
+        if let Ok(existing) = fs::read_to_string(&profile) {
+            if existing == content {
+                return Ok(profile);
+            }
+        }
+    }
+    fs::write(&profile, content).map_err(|e| format!("write {}: {e}", profile.display()))?;
+    Ok(profile)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn integration_root() -> Result<PathBuf, String> {
+    let home = home_dir().ok_or_else(|| "HOME/USERPROFILE not set".to_string())?;
+    let root = home.join(".cache").join("terax").join("shell-integration");
     fs::create_dir_all(&root).map_err(|e| format!("create {}: {e}", root.display()))?;
     Ok(root)
 }
 
+#[cfg(not(target_os = "windows"))]
 fn prepare_zdotdir() -> Result<PathBuf, String> {
     let dir = integration_root()?.join("zsh");
     fs::create_dir_all(&dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
@@ -136,6 +254,7 @@ fn prepare_zdotdir() -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+#[cfg(not(target_os = "windows"))]
 fn prepare_bash_rcfile() -> Result<PathBuf, String> {
     let dir = integration_root()?.join("bash");
     fs::create_dir_all(&dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
@@ -144,6 +263,7 @@ fn prepare_bash_rcfile() -> Result<PathBuf, String> {
     Ok(rc)
 }
 
+#[cfg(not(target_os = "windows"))]
 fn write_if_changed(path: &Path, content: &str) -> Result<(), String> {
     if let Ok(existing) = fs::read_to_string(path) {
         if existing == content {

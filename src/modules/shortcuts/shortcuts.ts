@@ -7,6 +7,8 @@
  * binding the runtime no longer matches (or vice-versa).
  */
 
+import { IS_MAC } from "@/lib/platform";
+
 export type ShortcutId =
   | "tab.new"
   | "tab.newPreview"
@@ -32,40 +34,42 @@ export type Shortcut = {
 };
 
 const isMod = (e: KeyboardEvent) => e.metaKey || e.ctrlKey;
+/** Platform-appropriate modifier symbol for display. */
+const MOD = IS_MAC ? "⌘" : "Ctrl";
 
 export const SHORTCUTS: Shortcut[] = [
   {
     id: "shortcuts.open",
     label: "Show keyboard shortcuts",
-    keys: ["⌘", "K"],
+    keys: [MOD, "K"],
     group: "General",
     match: (e) => isMod(e) && e.key.toLowerCase() === "k",
   },
   {
     id: "tab.new",
     label: "New tab",
-    keys: ["⌘", "T"],
+    keys: [MOD, "T"],
     group: "Tabs",
     match: (e) => isMod(e) && e.key.toLowerCase() === "t",
   },
   {
     id: "tab.newPreview",
     label: "New preview tab",
-    keys: ["⌘", "P"],
+    keys: [MOD, "P"],
     group: "Tabs",
     match: (e) => isMod(e) && !e.shiftKey && e.key.toLowerCase() === "p",
   },
   {
     id: "tab.newEditor",
     label: "New editor tab",
-    keys: ["⌘", "E"],
+    keys: [MOD, "E"],
     group: "Tabs",
     match: (e) => isMod(e) && !e.shiftKey && e.key.toLowerCase() === "e",
   },
   {
     id: "tab.close",
     label: "Close tab",
-    keys: ["⌘", "W"],
+    keys: [MOD, "W"],
     group: "Tabs",
     match: (e) => isMod(e) && e.key.toLowerCase() === "w",
   },
@@ -87,35 +91,35 @@ export const SHORTCUTS: Shortcut[] = [
   {
     id: "tab.selectByIndex",
     label: "Jump to tab 1–9",
-    keys: ["⌘", "1…9"],
+    keys: [MOD, "1…9"],
     group: "Tabs",
     match: (e) => isMod(e) && /^[1-9]$/.test(e.key),
   },
   {
     id: "search.focus",
     label: "Find in terminal",
-    keys: ["⌘", "F"],
+    keys: [MOD, "F"],
     group: "Search",
     match: (e) => isMod(e) && e.key.toLowerCase() === "f",
   },
   {
     id: "ai.toggle",
     label: "Toggle AI agent",
-    keys: ["⌘", "I"],
+    keys: [MOD, "I"],
     group: "AI",
     match: (e) => isMod(e) && e.key.toLowerCase() === "i",
   },
   {
     id: "ai.askSelection",
     label: "Ask AI about selection",
-    keys: ["⌘", "L"],
+    keys: [MOD, "L"],
     group: "AI",
     match: (e) => isMod(e) && e.key.toLowerCase() === "l",
   },
   {
     id: "sidebar.toggle",
     label: "Toggle file explorer",
-    keys: ["⌘", "B"],
+    keys: [MOD, "B"],
     group: "View",
     match: (e) => isMod(e) && e.key.toLowerCase() === "b",
   },

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { WindowControls } from "@/components/WindowControls";
-import { IS_MAC, USE_CUSTOM_WINDOW_CONTROLS } from "@/lib/platform";
+import { IS_MAC, IS_WINDOWS, USE_CUSTOM_WINDOW_CONTROLS } from "@/lib/platform";
 import type { Tab } from "@/modules/tabs";
 import { TabBar } from "@/modules/tabs";
 import {
@@ -21,6 +21,7 @@ type Props = {
   activeId: number;
   onSelect: (id: number) => void;
   onNew: () => void;
+  onNewInFolder: () => void;
   onNewPreview: () => void;
   onNewEditor: () => void;
   onClose: (id: number) => void;
@@ -38,6 +39,7 @@ export function Header({
   activeId,
   onSelect,
   onNew,
+  onNewInFolder,
   onNewPreview,
   onNewEditor,
   onClose,
@@ -68,7 +70,7 @@ export function Header({
         size="icon"
         className="size-7 shrink-0 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
         onClick={onOpenShortcuts}
-        title="Keyboard shortcuts (⌘K)"
+        title={`Keyboard shortcuts (${IS_MAC ? "⌘" : "Ctrl+"}K)`}
       >
         <HugeiconsIcon icon={KeyboardIcon} size={16} strokeWidth={1.75} />
       </Button>
@@ -89,7 +91,7 @@ export function Header({
       ref={rootRef}
       data-tauri-drag-region
       className={`flex h-10 shrink-0 items-center gap-2 border-b border-border/60 bg-card select-none ${
-        IS_MAC ? "pr-2 pl-20" : "pr-0 pl-2"
+        IS_MAC ? "pr-2 pl-20" : IS_WINDOWS ? "pr-36 pl-2" : "pr-0 pl-2"
       }`}
     >
       <Button
@@ -120,6 +122,7 @@ export function Header({
           activeId={activeId}
           onSelect={onSelect}
           onNew={onNew}
+          onNewInFolder={onNewInFolder}
           onNewPreview={onNewPreview}
           onNewEditor={onNewEditor}
           onClose={onClose}
