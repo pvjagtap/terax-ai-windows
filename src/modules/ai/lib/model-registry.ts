@@ -20,8 +20,24 @@ import {
 
 // ── Helpers: map Copilot API response to ModelInfo ─────────────────────────
 
-function inferHint(id: string, name: string): string {
-  const n = (name + " " + id).toLowerCase();
+/** The endpoint our SDK sends to — models must support this. */
+const CHAT_COMPLETIONS = "/chat/completions";
+
+/** Check if a model can be used via /chat/completions. */
+function supportsChatCompletions(entry: CopilotModelEntry): boolean {
+  // If supported_endpoints is absent/empty, assume the old-style model is OK.
+  if (!entry.supported_endpoints || entry.supported_endpoints.length === 0)
+    return true;
+  return entry.supported_endpoints.includes(CHAT_COMPLETIONS);
+}
+
+function buildHint(entry: CopilotModelEntry): string {
+  // Use model_picker_category when available
+  if (entry.model_picker_category === "lightweight") return "Fast";
+  if (entry.model_picker_category === "powerful") return "Best";
+  if (entry.model_picker_category === "versatile") return "Versatile";
+  // Fall back to name-based inference
+  const n = ((entry.name || "") + " " + entry.id).toLowerCase();
   if (n.includes("opus")) return "Best";
   if (n.includes("sonnet")) return "Balanced";
   if (n.includes("haiku")) return "Fast";
@@ -53,12 +69,15 @@ function inferTags(id: string, name: string): ModelInfo["tags"] {
 
 function copilotEntryToModelInfo(entry: CopilotModelEntry): ModelInfo {
   const label = entry.name || entry.id;
+  const vendorTag = entry.vendor ? ` (${entry.vendor})` : "";
+  const multiplierTag =
+    entry.billing?.multiplier != null ? ` · ${entry.billing.multiplier}x` : "";
   return {
     id: entry.id,
     provider: "github-copilot" as ProviderId,
     label,
-    hint: inferHint(entry.id, label),
-    description: `${label} via GitHub Copilot Enterprise.`,
+    hint: `${buildHint(entry)}${multiplierTag}`,
+    description: `${label}${vendorTag} via GitHub Copilot.`,
     capabilities: inferCapabilities(entry.id, label),
     tags: inferTags(entry.id, label),
   };
@@ -98,9 +117,15 @@ export const useModelRegistry = create<ModelRegistryState>((set, get) => ({
     try {
       const session = await getCopilotSession();
       const raw = await fetchCopilotModels(session);
-      // Only include models the picker should show.
+      // Only include models that:
+      //  1) Are shown in the model picker
+      //  2) Have capabilities.type === "chat" (not embeddings/completion)
+      //  3) Support the /chat/completions endpoint our SDK uses
       const eligible = raw.filter(
-        (m) => m.model_picker_enabled !== false,
+        (m) =>
+          m.model_picker_enabled !== false &&
+          (m.capabilities?.type === "chat" || !m.capabilities?.type) &&
+          supportsChatCompletions(m),
       );
       const models = eligible.map(copilotEntryToModelInfo);
       set({ copilotModels: models, loading: false, lastFetchedAt: Date.now() });

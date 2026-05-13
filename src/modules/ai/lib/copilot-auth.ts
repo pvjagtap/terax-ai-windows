@@ -285,15 +285,40 @@ export type CopilotModelEntry = {
   id: string;
   name: string;
   version: string;
+  object?: string;
+  vendor?: string;
+  preview?: boolean;
+  is_chat_default?: boolean;
+  is_chat_fallback?: boolean;
+  model_picker_enabled?: boolean;
+  model_picker_category?: "versatile" | "lightweight" | "powerful";
+  /** Which API endpoints this model supports. */
+  supported_endpoints?: string[];
+  billing?: {
+    is_premium?: boolean;
+    multiplier?: number;
+    restricted_to?: string[];
+  };
   capabilities?: {
     family?: string;
-    type?: string;
+    type?: string;  // "chat" | "completion" | "embeddings"
+    tokenizer?: string;
     limits?: {
       max_prompt_tokens?: number;
       max_output_tokens?: number;
+      max_context_window_tokens?: number;
+    };
+    supports?: {
+      streaming?: boolean;
+      tool_calls?: boolean;
+      parallel_tool_calls?: boolean;
+      vision?: boolean;
+      thinking?: boolean;
     };
   };
-  model_picker_enabled?: boolean;
+  policy?: { state?: string; terms?: string };
+  warning_messages?: { code: string; message: string }[];
+  info_messages?: { code: string; message: string }[];
 };
 
 /**

@@ -127,59 +127,34 @@ export const STATIC_MODELS = [
     tags: ["reasoning", "tools", "coding"],
   },
 
-  // ── GitHub Copilot (Enterprise) ─────────────────────────────────────────
-  // Model IDs match the Copilot Chat API's internal naming convention.
+  // ── GitHub Copilot ───────────────────────────────────────────────────────
+  // Static fallbacks shown before the dynamic /models fetch completes.
+  // Only includes models confirmed to support /chat/completions.
+  // Once signed in, the dynamic registry replaces these entirely.
+  {
+    id: "gpt-4o",
+    provider: "github-copilot",
+    label: "GPT-4o",
+    hint: "Versatile",
+    description: "GPT-4o via GitHub Copilot.",
+    capabilities: { intelligence: 5, speed: 3, cost: 2 },
+    tags: ["vision", "reasoning", "tools", "coding"],
+  },
   {
     id: "gpt-4.1",
     provider: "github-copilot",
     label: "GPT-4.1",
     hint: "Flagship",
-    description: "OpenAI GPT-4.1 via GitHub Copilot Enterprise.",
+    description: "OpenAI GPT-4.1 via GitHub Copilot.",
     capabilities: { intelligence: 5, speed: 3, cost: 2 },
     tags: ["vision", "reasoning", "tools", "coding"],
-  },
-  {
-    id: "gpt-5-mini",
-    provider: "github-copilot",
-    label: "GPT-5 mini",
-    hint: "Fast",
-    description: "Fast, cost-effective GPT-5 mini via Copilot Enterprise.",
-    capabilities: { intelligence: 4, speed: 5, cost: 4 },
-    tags: ["vision", "tools", "coding"],
-  },
-  {
-    id: "gpt-5.4",
-    provider: "github-copilot",
-    label: "GPT-5.4",
-    hint: "Latest",
-    description: "Latest flagship GPT-5.4 via Copilot Enterprise.",
-    capabilities: { intelligence: 5, speed: 3, cost: 1 },
-    tags: ["vision", "reasoning", "tools", "coding"],
-  },
-  {
-    id: "gpt-5.4-mini",
-    provider: "github-copilot",
-    label: "GPT-5.4 mini",
-    hint: "Latest Fast",
-    description: "Latest fast GPT-5.4 mini via Copilot Enterprise.",
-    capabilities: { intelligence: 4, speed: 5, cost: 3 },
-    tags: ["vision", "tools", "coding"],
-  },
-  {
-    id: "claude-sonnet-4.5",
-    provider: "github-copilot",
-    label: "Claude Sonnet 4.5",
-    hint: "Balanced",
-    description: "Anthropic Claude Sonnet 4.5 via Copilot Enterprise.",
-    capabilities: { intelligence: 5, speed: 4, cost: 3 },
-    tags: ["vision", "tools", "coding"],
   },
   {
     id: "claude-sonnet-4.6",
     provider: "github-copilot",
     label: "Claude Sonnet 4.6",
-    hint: "Latest Sonnet",
-    description: "Latest Claude Sonnet 4.6 via Copilot Enterprise.",
+    hint: "Balanced",
+    description: "Claude Sonnet 4.6 via GitHub Copilot.",
     capabilities: { intelligence: 5, speed: 4, cost: 3 },
     tags: ["vision", "tools", "coding"],
   },
@@ -187,18 +162,9 @@ export const STATIC_MODELS = [
     id: "claude-opus-4.6",
     provider: "github-copilot",
     label: "Claude Opus 4.6",
-    hint: "Best Claude",
-    description: "Claude Opus 4.6 — most capable Claude via Copilot Enterprise.",
+    hint: "Best",
+    description: "Claude Opus 4.6 via GitHub Copilot.",
     capabilities: { intelligence: 5, speed: 2, cost: 1 },
-    tags: ["vision", "reasoning", "tools", "coding"],
-  },
-  {
-    id: "gemini-2.5-pro",
-    provider: "github-copilot",
-    label: "Gemini 2.5 Pro",
-    hint: "Google",
-    description: "Google Gemini 2.5 Pro via Copilot Enterprise.",
-    capabilities: { intelligence: 5, speed: 3, cost: 2 },
     tags: ["vision", "reasoning", "tools", "coding"],
   },
 
@@ -356,7 +322,7 @@ export type AutocompleteProviderId = ProviderId;
 /** Sensible default model id per provider for inline autocomplete. */
 export const DEFAULT_AUTOCOMPLETE_MODEL: Partial<Record<ProviderId, string>> = {
   "azure-openai": "gpt-4o-mini",
-  "github-copilot": "gpt-5-mini",
+  "github-copilot": "gpt-4o",
   "azure-claude": "claude-3-haiku",
 };
 
