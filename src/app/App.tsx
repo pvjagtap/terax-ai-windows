@@ -96,14 +96,10 @@ export default function App() {
   const [activeEditorHandle, setActiveEditorHandle] =
     useState<EditorPaneHandle | null>(null);
   const sidebarRef = useRef<PanelImperativeHandle | null>(null);
-  // "hidden" = no sidebar, "collapsed" = icon-only (default), "expanded" = icons + names
-  const [leftSidebarState, setLeftSidebarState] = useState<"hidden" | "collapsed" | "expanded">("collapsed");
+  // "collapsed" = icon-only (default), "expanded" = icons + names
+  const [leftSidebarState, setLeftSidebarState] = useState<"collapsed" | "expanded">("collapsed");
   const toggleLeftSidebar = useCallback(() => {
-    setLeftSidebarState((v) => {
-      if (v === "hidden") return "collapsed";
-      if (v === "collapsed") return "expanded";
-      return "hidden";
-    });
+    setLeftSidebarState((v) => (v === "collapsed" ? "expanded" : "collapsed"));
   }, []);
   const toggleRightSidebar = useCallback(() => {
     const p = sidebarRef.current;
@@ -523,20 +519,18 @@ export default function App() {
           />
 
           <main className="flex min-h-0 flex-1">
-            {leftSidebarState !== "hidden" && (
-              <VerticalTabBar
-                tabs={tabs}
-                activeId={activeId}
-                expanded={leftSidebarState === "expanded"}
-                onSelect={setActiveId}
-                onNew={openNewTab}
-                onNewPrivate={openNewPrivateTab}
-                onNewPreview={() => openPreviewTab("")}
-                onNewEditor={() => setNewEditorOpen(true)}
-                onClose={handleClose}
-                onPin={pinTab}
-              />
-            )}
+            <VerticalTabBar
+              tabs={tabs}
+              activeId={activeId}
+              expanded={leftSidebarState === "expanded"}
+              onSelect={setActiveId}
+              onNew={openNewTab}
+              onNewPrivate={openNewPrivateTab}
+              onNewPreview={() => openPreviewTab("")}
+              onNewEditor={() => setNewEditorOpen(true)}
+              onClose={handleClose}
+              onPin={pinTab}
+            />
 
             <ResizablePanelGroup
               orientation="horizontal"
