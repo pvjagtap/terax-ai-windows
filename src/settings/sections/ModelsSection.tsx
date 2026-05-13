@@ -37,6 +37,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useMemo, useState } from "react";
 import { ProviderIcon } from "../components/ProviderIcon";
 import { ProviderKeyCard } from "../components/ProviderKeyCard";
+import { CopilotSignInCard } from "../components/CopilotSignInCard";
 import { SectionHeader } from "../components/SectionHeader";
 
 type KeysMap = Record<ProviderId, string | null>;
@@ -87,15 +88,27 @@ export function ModelsSection() {
           </span>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {PROVIDERS.map((p) => (
-            <ProviderKeyCard
-              key={p.id}
-              provider={p}
-              currentKey={keys[p.id]}
-              onSave={(v) => onSave(p.id, v)}
-              onClear={() => onClear(p.id)}
-            />
-          ))}
+          {PROVIDERS.map((p) =>
+            p.id === "github-copilot" ? (
+              <CopilotSignInCard
+                key={p.id}
+                signedIn={!!keys[p.id]}
+                onAuthChange={async () => {
+                  const fresh = await getAllKeys();
+                  setKeys(fresh);
+                  await emitKeysChanged();
+                }}
+              />
+            ) : (
+              <ProviderKeyCard
+                key={p.id}
+                provider={p}
+                currentKey={keys[p.id]}
+                onSave={(v) => onSave(p.id, v)}
+                onClear={() => onClear(p.id)}
+              />
+            ),
+          )}
         </div>
       </div>
 
@@ -116,6 +129,8 @@ function DefaultModelBlock({
   const m = getModel(defaultModel);
 
   const isAvailable = (_modelId: string, providerId: ProviderId): boolean => {
+    // Copilot uses OAuth — check if OAuth token is present in keyring.
+    if (providerId === "github-copilot") return !!keys[providerId];
     return providerNeedsKey(providerId) ? !!keys[providerId] : true;
   };
 
@@ -148,7 +163,12 @@ function DefaultModelBlock({
           {PROVIDERS.map((p) => {
             const models = MODELS.filter((x) => x.provider === p.id);
             if (models.length === 0) return null;
-            const hasKey = providerNeedsKey(p.id) ? !!keys[p.id] : true;
+            const hasKey =
+              p.id === "github-copilot"
+                ? !!keys[p.id]
+                : providerNeedsKey(p.id)
+                  ? !!keys[p.id]
+                  : true;
             return (
               <div key={p.id} className="px-1 pt-1.5 first:pt-1">
                 <div className="mb-0.5 flex items-center gap-1.5 px-2 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
@@ -156,7 +176,7 @@ function DefaultModelBlock({
                   <span>{p.label}</span>
                   {!hasKey ? (
                     <span className="ml-auto text-[9.5px] normal-case tracking-normal text-muted-foreground/70">
-                      no key
+                      {p.id === "github-copilot" ? "not signed in" : "no key"}
                     </span>
                   ) : null}
                 </div>
@@ -326,7 +346,12 @@ function AutocompleteBlock({ keys }: { keys: KeysMap }) {
               {PROVIDERS.map((p) => {
                 const list = grouped.get(p.id);
                 if (!list || list.length === 0) return null;
-                const pHasKey = providerNeedsKey(p.id) ? !!keys[p.id] : true;
+                const pHasKey =
+                  p.id === "github-copilot"
+                    ? !!keys[p.id]
+                    : providerNeedsKey(p.id)
+                      ? !!keys[p.id]
+                      : true;
                 return (
                   <div key={p.id} className="px-1 pt-1.5 first:pt-1">
                     <div className="mb-0.5 flex items-center gap-1.5 px-2 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">

@@ -26,9 +26,11 @@ export const PROVIDERS: readonly ProviderInfo[] = [
   {
     id: "github-copilot",
     label: "GitHub Copilot (Enterprise)",
-    keyringAccount: "github-copilot-token",
+    keyringAccount: "github-copilot-oauth-token",
     keyPrefix: null,
-    consoleUrl: "https://github.com/settings/personal-access-tokens/new",
+    consoleUrl: "https://github.com/settings/copilot",
+    /** Copilot uses OAuth device-flow, not a plain API key. */
+    keyOptional: true,
   },
   {
     id: "azure-claude",
@@ -126,8 +128,9 @@ export const MODELS = [
   },
 
   // ── GitHub Copilot (Enterprise) ─────────────────────────────────────────
+  // Model IDs match the Copilot Chat API's internal naming convention.
   {
-    id: "openai/gpt-4.1",
+    id: "gpt-4.1",
     provider: "github-copilot",
     label: "GPT-4.1",
     hint: "Flagship",
@@ -136,7 +139,7 @@ export const MODELS = [
     tags: ["vision", "reasoning", "tools", "coding"],
   },
   {
-    id: "openai/gpt-5-mini",
+    id: "gpt-5-mini",
     provider: "github-copilot",
     label: "GPT-5 mini",
     hint: "Fast",
@@ -145,7 +148,7 @@ export const MODELS = [
     tags: ["vision", "tools", "coding"],
   },
   {
-    id: "openai/gpt-5.4",
+    id: "gpt-5.4",
     provider: "github-copilot",
     label: "GPT-5.4",
     hint: "Latest",
@@ -154,7 +157,7 @@ export const MODELS = [
     tags: ["vision", "reasoning", "tools", "coding"],
   },
   {
-    id: "openai/gpt-5.4-mini",
+    id: "gpt-5.4-mini",
     provider: "github-copilot",
     label: "GPT-5.4 mini",
     hint: "Latest Fast",
@@ -163,7 +166,7 @@ export const MODELS = [
     tags: ["vision", "tools", "coding"],
   },
   {
-    id: "anthropic/claude-sonnet-4.5",
+    id: "claude-sonnet-4.5",
     provider: "github-copilot",
     label: "Claude Sonnet 4.5",
     hint: "Balanced",
@@ -172,7 +175,7 @@ export const MODELS = [
     tags: ["vision", "tools", "coding"],
   },
   {
-    id: "anthropic/claude-sonnet-4.6",
+    id: "claude-sonnet-4.6",
     provider: "github-copilot",
     label: "Claude Sonnet 4.6",
     hint: "Latest Sonnet",
@@ -181,7 +184,7 @@ export const MODELS = [
     tags: ["vision", "tools", "coding"],
   },
   {
-    id: "anthropic/claude-opus-4.6",
+    id: "claude-opus-4.6",
     provider: "github-copilot",
     label: "Claude Opus 4.6",
     hint: "Best Claude",
@@ -190,7 +193,7 @@ export const MODELS = [
     tags: ["vision", "reasoning", "tools", "coding"],
   },
   {
-    id: "google/gemini-2.5-pro",
+    id: "gemini-2.5-pro",
     provider: "github-copilot",
     label: "Gemini 2.5 Pro",
     hint: "Google",
@@ -247,14 +250,14 @@ export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   "o1-preview": 128_000,
   "o1-mini": 128_000,
   "o3-mini": 200_000,
-  "openai/gpt-4.1": 1_048_576,
-  "openai/gpt-5-mini": 1_048_576,
-  "openai/gpt-5.4": 1_048_576,
-  "openai/gpt-5.4-mini": 1_048_576,
-  "anthropic/claude-sonnet-4.5": 200_000,
-  "anthropic/claude-sonnet-4.6": 200_000,
-  "anthropic/claude-opus-4.6": 200_000,
-  "google/gemini-2.5-pro": 1_000_000,
+  "gpt-4.1": 1_048_576,
+  "gpt-5-mini": 1_048_576,
+  "gpt-5.4": 1_048_576,
+  "gpt-5.4-mini": 1_048_576,
+  "claude-sonnet-4.5": 200_000,
+  "claude-sonnet-4.6": 200_000,
+  "claude-opus-4.6": 200_000,
+  "gemini-2.5-pro": 1_000_000,
   "claude-3.5-sonnet": 200_000,
   "claude-3-opus": 200_000,
   "claude-3-haiku": 200_000,
@@ -280,14 +283,14 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
   "o1-mini": { input: 3, output: 12 },
   "o3-mini": { input: 1.1, output: 4.4 },
   // GitHub Copilot Enterprise (premium-request based, costs are approximate)
-  "openai/gpt-4.1": { input: 2, output: 8, cacheRead: 0.5 },
-  "openai/gpt-5-mini": { input: 0.3, output: 1.2, cacheRead: 0.075 },
-  "openai/gpt-5.4": { input: 2.5, output: 10, cacheRead: 0.6 },
-  "openai/gpt-5.4-mini": { input: 0.3, output: 1.2, cacheRead: 0.075 },
-  "anthropic/claude-sonnet-4.5": { input: 3, output: 15, cacheRead: 0.3 },
-  "anthropic/claude-sonnet-4.6": { input: 3, output: 15, cacheRead: 0.3 },
-  "anthropic/claude-opus-4.6": { input: 15, output: 75, cacheRead: 1.5 },
-  "google/gemini-2.5-pro": { input: 1.25, output: 10 },
+  "gpt-4.1": { input: 2, output: 8, cacheRead: 0.5 },
+  "gpt-5-mini": { input: 0.3, output: 1.2, cacheRead: 0.075 },
+  "gpt-5.4": { input: 2.5, output: 10, cacheRead: 0.6 },
+  "gpt-5.4-mini": { input: 0.3, output: 1.2, cacheRead: 0.075 },
+  "claude-sonnet-4.5": { input: 3, output: 15, cacheRead: 0.3 },
+  "claude-sonnet-4.6": { input: 3, output: 15, cacheRead: 0.3 },
+  "claude-opus-4.6": { input: 15, output: 75, cacheRead: 1.5 },
+  "gemini-2.5-pro": { input: 1.25, output: 10 },
   // Azure Claude (pay-per-token via Azure subscription)
   "claude-3.5-sonnet": { input: 3, output: 15, cacheRead: 0.3 },
   "claude-3-opus": { input: 15, output: 75, cacheRead: 1.5 },
@@ -309,9 +312,9 @@ export function estimateCost(
   );
 }
 
-/** All providers require an API key / token. */
-export function providerNeedsKey(_id: ProviderId): boolean {
-  return true;
+/** All providers require credentials, but github-copilot uses OAuth not a key. */
+export function providerNeedsKey(id: ProviderId): boolean {
+  return id !== "github-copilot";
 }
 
 /** All providers support API keys. */
@@ -325,7 +328,7 @@ export type AutocompleteProviderId = ProviderId;
 /** Sensible default model id per provider for inline autocomplete. */
 export const DEFAULT_AUTOCOMPLETE_MODEL: Partial<Record<ProviderId, string>> = {
   "azure-openai": "gpt-4o-mini",
-  "github-copilot": "openai/gpt-5-mini",
+  "github-copilot": "gpt-5-mini",
   "azure-claude": "claude-3-haiku",
 };
 
@@ -336,7 +339,6 @@ export function getAutocompleteEligibleModels(): readonly ModelInfo[] {
 
 export const AZURE_OPENAI_DEFAULT_ENDPOINT = "";
 export const AZURE_CLAUDE_DEFAULT_ENDPOINT = "";
-export const GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference";
 export const MAX_AGENT_STEPS = 24;
 export const TERMINAL_BUFFER_LINES = 300;
 

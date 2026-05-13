@@ -11,7 +11,6 @@ import {
   getModel,
   getModelContextLimit,
   AZURE_OPENAI_DEFAULT_ENDPOINT,
-  GITHUB_MODELS_BASE_URL,
   MAX_AGENT_STEPS,
   providerNeedsKey,
   selectSystemPrompt,
@@ -19,6 +18,7 @@ import {
   type ProviderId,
 } from "../config";
 import type { ProviderKeys } from "./keyring";
+import { getCopilotSession } from "./copilot-auth";
 import { proxyFetch } from "./proxyFetch";
 import { buildTools, type ToolContext } from "../tools/tools";
 import { compactModelMessages } from "./compact";
@@ -69,7 +69,9 @@ export async function buildLanguageModel(
   resolvedModelId: string,
   options: BuildModelOptions = {},
 ): Promise<LanguageModel> {
-  if (providerNeedsKey(provider) && !keys[provider]) {
+  // github-copilot uses OAuth device-flow; the keyring value is the OAuth
+  // token (may be null when not signed in).  Other providers need a plain key.
+  if (provider !== "github-copilot" && providerNeedsKey(provider) && !keys[provider]) {
     throw new Error(
       `No API key configured for ${provider}. Open Settings → AI to add one.`,
     );
@@ -77,9 +79,13 @@ export async function buildLanguageModel(
   const key = keys[provider] ?? "";
   const azureEndpoint = options.azureOpenaiEndpoint ?? AZURE_OPENAI_DEFAULT_ENDPOINT;
   const azureClaudeEndpoint = options.azureClaudeEndpoint ?? "";
-  const cacheKey = `${provider} ${key} ${resolvedModelId} ${azureEndpoint} ${azureClaudeEndpoint}`;
-  const hit = modelCache.get(cacheKey);
-  if (hit) return hit;
+
+  // Don't cache copilot models — the session token rotates every ~30 min.
+  if (provider !== "github-copilot") {
+    const cacheKey = `${provider} ${key} ${resolvedModelId} ${azureEndpoint} ${azureClaudeEndpoint}`;
+    const hit = modelCache.get(cacheKey);
+    if (hit) return hit;
+  }
 
   let built: LanguageModel;
   switch (provider) {
@@ -103,14 +109,22 @@ export async function buildLanguageModel(
       break;
     }
     case "github-copilot": {
+      // Exchange the OAuth token (stored in keyring) for a short-lived
+      // Copilot session token.  The session also tells us which API
+      // endpoint to hit (enterprise vs individual).
+      const session = await getCopilotSession(key || undefined);
       const { createOpenAICompatible } = await import(
         "@ai-sdk/openai-compatible"
       );
       built = createOpenAICompatible({
         name: "github-copilot",
-        baseURL: GITHUB_MODELS_BASE_URL,
-        apiKey: key,
-        headers: { "X-GitHub-Api-Version": "2026-03-10" },
+        baseURL: session.endpoints.api,
+        apiKey: session.token,
+        headers: {
+          "Copilot-Integration-Id": "vscode-chat",
+          "Editor-Version": "Terax/1.0.0",
+          "Editor-Plugin-Version": "terax-copilot/1.0.0",
+        },
         fetch: proxyFetch,
       })(resolvedModelId);
       break;
@@ -137,7 +151,10 @@ export async function buildLanguageModel(
       throw new Error(`Unsupported provider: ${_exhaustive as ProviderId}`);
     }
   }
-  modelCache.set(cacheKey, built);
+  if (provider !== "github-copilot") {
+    const cacheKey = `${provider} ${key} ${resolvedModelId} ${azureEndpoint} ${azureClaudeEndpoint}`;
+    modelCache.set(cacheKey, built);
+  }
   return built;
 }
 
