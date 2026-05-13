@@ -42,10 +42,15 @@ export function CopilotSignInCard({ signedIn, onAuthChange }: Props) {
   // Sync with parent's signedIn prop and also verify on mount.
   useEffect(() => {
     setIsSignedIn(signedIn);
-    void isCopilotSignedIn().then((v) => {
-      setIsSignedIn(v);
-      setChecking(false);
-    });
+    void isCopilotSignedIn()
+      .then((v) => {
+        setIsSignedIn(v);
+        setChecking(false);
+      })
+      .catch(() => {
+        // Keyring read failed — treat as not signed in.
+        setChecking(false);
+      });
   }, [signedIn]);
 
   const startSignIn = async () => {

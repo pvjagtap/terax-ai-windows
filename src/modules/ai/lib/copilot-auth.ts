@@ -14,6 +14,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { KEYRING_SERVICE } from "../config";
+import { proxyFetch } from "./proxyFetch";
 
 // ── Known Copilot OAuth constants ──────────────────────────────────────────
 // This is the client-id used by VS Code's Copilot extension for the
@@ -47,7 +48,7 @@ export type CopilotSession = {
 
 // ── Device Flow ────────────────────────────────────────────────────────────
 export async function startDeviceFlow(): Promise<DeviceFlowInfo> {
-  const res = await fetch(DEVICE_CODE_URL, {
+  const res = await proxyFetch(DEVICE_CODE_URL, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -94,7 +95,7 @@ export async function pollForOAuthToken(
     await sleep(pollMs);
     if (signal?.aborted) throw new Error("Cancelled");
 
-    const res = await fetch(OAUTH_TOKEN_URL, {
+    const res = await proxyFetch(OAUTH_TOKEN_URL, {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -186,7 +187,7 @@ export async function getCopilotSession(
     );
   }
 
-  const res = await fetch(COPILOT_TOKEN_URL, {
+  const res = await proxyFetch(COPILOT_TOKEN_URL, {
     headers: {
       Authorization: `token ${token}`,
       Accept: "application/json",
@@ -265,7 +266,7 @@ export async function fetchCopilotModels(
   session?: CopilotSession,
 ): Promise<CopilotModelEntry[]> {
   const s = session ?? (await getCopilotSession());
-  const res = await fetch(`${s.endpoints.api}/models`, {
+  const res = await proxyFetch(`${s.endpoints.api}/models`, {
     headers: {
       Authorization: `Bearer ${s.token}`,
       Accept: "application/json",
