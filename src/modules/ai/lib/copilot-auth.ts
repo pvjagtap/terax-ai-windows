@@ -202,8 +202,40 @@ export async function getCopilotSession(
       "GitHub Copilot session expired. Please sign in again in Settings → Models.",
     );
   }
+  if (res.status === 403) {
+    // 403 can mean: no Copilot subscription, org requires SAML SSO
+    // authorization, or the OAuth app hasn't been approved by the org.
+    let detail = "";
+    try {
+      const errBody = await res.text();
+      detail = errBody;
+      // GitHub sends JSON like {"message":"...", "documentation_url":"..."}
+      const parsed = JSON.parse(errBody) as { message?: string };
+      if (parsed.message) detail = parsed.message;
+    } catch { /* non-JSON body */ }
+
+    const ssoHint = detail.toLowerCase().includes("sso")
+      || detail.toLowerCase().includes("saml")
+      || detail.toLowerCase().includes("organization");
+
+    if (ssoHint) {
+      throw new Error(
+        `Your organization requires SSO authorization for Copilot. ` +
+        `Visit https://github.com/settings/connections/applications/${COPILOT_CLIENT_ID} ` +
+        `and click "Authorize" next to your organization, then try again.`,
+      );
+    }
+
+    throw new Error(
+      `Copilot token exchange failed (403): ${detail || "Forbidden"}. ` +
+      `Ensure your GitHub account has an active Copilot subscription. ` +
+      `If your org uses SSO, authorize at: https://github.com/settings/connections/applications/${COPILOT_CLIENT_ID}`,
+    );
+  }
   if (!res.ok) {
-    throw new Error(`Copilot token exchange failed: ${res.status}`);
+    let detail = "";
+    try { detail = await res.text(); } catch { /* ignore */ }
+    throw new Error(`Copilot token exchange failed: ${res.status} ${detail}`.trim());
   }
 
   const body = (await res.json()) as {
