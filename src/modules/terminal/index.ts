@@ -3,6 +3,7 @@ export { TerminalStack } from "./TerminalStack";
 export { type TerminalContextAction } from "./PaneTreeView";
 export {
   disposeSession,
+  refitAllTerminals,
   respawnSession,
 } from "./lib/useTerminalSession";
 export {

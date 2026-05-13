@@ -393,6 +393,39 @@ export function disposeSession(leafId: number): void {
   sessions.delete(leafId);
 }
 
+const PTY_RESIZE_DEBOUNCE_MS_REFIT = 256;
+
+/**
+ * Force every attached terminal to re-measure its container and re-fit.
+ * Resets cached dimensions so the size-guard in ResizeObserver doesn't skip.
+ * Call after layout changes that the ResizeObserver might miss or measure
+ * too early (sidebar toggle, panel resize animations, etc.).
+ */
+export function refitAllTerminals(): void {
+  for (const s of sessions.values()) {
+    if (s.disposed || !s.term.element) continue;
+    s.lastW = 0;
+    s.lastH = 0;
+    try {
+      s.fitAddon.fit();
+    } catch {
+      // term may not be attached yet
+    }
+    // Debounced PTY resize so shell redraws once
+    if (s.ptyTimer) clearTimeout(s.ptyTimer);
+    if (s.pty) {
+      s.ptyTimer = setTimeout(() => {
+        s.ptyTimer = null;
+        if (!s.pty || s.disposed) return;
+        if (s.term.cols === s.lastSentCols && s.term.rows === s.lastSentRows) return;
+        s.lastSentCols = s.term.cols;
+        s.lastSentRows = s.term.rows;
+        s.pty.resize(s.term.cols, s.term.rows);
+      }, PTY_RESIZE_DEBOUNCE_MS_REFIT);
+    }
+  }
+}
+
 type Options = {
   leafId: number;
   container: React.RefObject<HTMLDivElement | null>;

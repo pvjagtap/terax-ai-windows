@@ -45,6 +45,7 @@ import {
   disposeSession,
   hasLeaf,
   leafIds,
+  refitAllTerminals,
   respawnSession,
   TerminalStack,
   type TerminalContextAction,
@@ -103,15 +104,26 @@ export default function App() {
   const sidebarRef = useRef<PanelImperativeHandle | null>(null);
   // "collapsed" = icon-only (default), "expanded" = icons + names
   const [leftSidebarState, setLeftSidebarState] = useState<"collapsed" | "expanded">("collapsed");
+
+  // Double-rAF ensures the browser has finished layout before re-measuring.
+  // Extra 100ms + 300ms refits catch CSS transitions that settle late.
+  const scheduleRefit = useCallback(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => refitAllTerminals()));
+    setTimeout(() => refitAllTerminals(), 100);
+    setTimeout(() => refitAllTerminals(), 300);
+  }, []);
+
   const toggleLeftSidebar = useCallback(() => {
     setLeftSidebarState((v) => (v === "collapsed" ? "expanded" : "collapsed"));
-  }, []);
+    scheduleRefit();
+  }, [scheduleRefit]);
   const toggleRightSidebar = useCallback(() => {
     const p = sidebarRef.current;
     if (!p) return;
     if (p.getSize().asPercentage <= 0) p.expand();
     else p.collapse();
-  }, []);
+    scheduleRefit();
+  }, [scheduleRefit]);
 
   const [home, setHome] = useState<string | null>(null);
   const [pendingCloseTab, setPendingCloseTab] = useState<number | null>(null);
@@ -447,6 +459,13 @@ export default function App() {
     };
     window.addEventListener("wheel", onWheel, { passive: false });
     return () => window.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Re-fit all terminals on window resize (catch edge-cases ResizeObserver misses)
+  useEffect(() => {
+    const onResize = () => refitAllTerminals();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   const registerTerminalHandle = useCallback(
