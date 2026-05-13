@@ -28,6 +28,9 @@ const COPILOT_TOKEN_URL =
 // Keyring account for the long-lived OAuth refresh token.
 export const COPILOT_KEYRING_ACCOUNT = "github-copilot-oauth-token";
 
+// GitHub API requires User-Agent on every request.
+const UA = "Terax/1.0.0";
+
 // ── Types ──────────────────────────────────────────────────────────────────
 export type DeviceFlowInfo = {
   deviceCode: string;
@@ -53,6 +56,7 @@ export async function startDeviceFlow(): Promise<DeviceFlowInfo> {
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
+      "User-Agent": UA,
     },
     body: JSON.stringify({
       client_id: COPILOT_CLIENT_ID,
@@ -100,6 +104,7 @@ export async function pollForOAuthToken(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        "User-Agent": UA,
       },
       body: JSON.stringify({
         client_id: COPILOT_CLIENT_ID,
@@ -191,6 +196,7 @@ export async function getCopilotSession(
     headers: {
       Authorization: `token ${token}`,
       Accept: "application/json",
+      "User-Agent": UA,
       "Editor-Version": "Terax/1.0.0",
       "Editor-Plugin-Version": "terax-copilot/1.0.0",
     },
@@ -302,6 +308,7 @@ export async function fetchCopilotModels(
     headers: {
       Authorization: `Bearer ${s.token}`,
       Accept: "application/json",
+      "User-Agent": UA,
       "Copilot-Integration-Id": "vscode-chat",
       "Editor-Version": "Terax/1.0.0",
       "Editor-Plugin-Version": "terax-copilot/1.0.0",
