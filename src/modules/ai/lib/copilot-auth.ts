@@ -241,6 +241,50 @@ export async function isCopilotSignedIn(): Promise<boolean> {
   return !!t;
 }
 
+// ── Dynamic model discovery ────────────────────────────────────────────────
+export type CopilotModelEntry = {
+  id: string;
+  name: string;
+  version: string;
+  capabilities?: {
+    family?: string;
+    type?: string;
+    limits?: {
+      max_prompt_tokens?: number;
+      max_output_tokens?: number;
+    };
+  };
+  model_picker_enabled?: boolean;
+};
+
+/**
+ * Fetch the list of models available to this Copilot subscription.
+ * Requires an active session (call `getCopilotSession()` first or pass one).
+ */
+export async function fetchCopilotModels(
+  session?: CopilotSession,
+): Promise<CopilotModelEntry[]> {
+  const s = session ?? (await getCopilotSession());
+  const res = await fetch(`${s.endpoints.api}/models`, {
+    headers: {
+      Authorization: `Bearer ${s.token}`,
+      Accept: "application/json",
+      "Copilot-Integration-Id": "vscode-chat",
+      "Editor-Version": "Terax/1.0.0",
+      "Editor-Plugin-Version": "terax-copilot/1.0.0",
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch Copilot models: ${res.status}`);
+  }
+  const body = (await res.json()) as {
+    data?: CopilotModelEntry[];
+    models?: CopilotModelEntry[];
+  };
+  // GitHub's response uses either `data` or `models` array.
+  return body.data ?? body.models ?? [];
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));

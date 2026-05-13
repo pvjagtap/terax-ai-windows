@@ -70,7 +70,7 @@ export type ModelInfo = {
   tags?: readonly ModelTag[];
 };
 
-export const MODELS = [
+export const STATIC_MODELS = [
   // ── Azure OpenAI ──────────────────────────────────────────────────────────
   {
     id: "gpt-4o",
@@ -232,12 +232,40 @@ export const MODELS = [
   },
 ] as const satisfies readonly ModelInfo[];
 
-export type ModelId = (typeof MODELS)[number]["id"];
+/**
+ * Backward-compatible alias. Components that need reactivity
+ * to dynamic Copilot models should use `useAllModels()` from
+ * `model-registry.ts` instead.
+ */
+export const MODELS: readonly ModelInfo[] = STATIC_MODELS;
 
-export function getModel(id: ModelId): ModelInfo {
-  const m = MODELS.find((x) => x.id === id);
-  if (!m) throw new Error(`Unknown model: ${id}`);
-  return m;
+/** Model ID — widened to `string` to support dynamically-fetched models. */
+export type ModelId = string;
+
+/**
+ * Look up a model by ID.
+ * When `models` is omitted, searches only the static list.
+ * Callers with access to the dynamic list should pass it in.
+ */
+export function getModel(
+  id: ModelId,
+  models: readonly ModelInfo[] = STATIC_MODELS,
+): ModelInfo {
+  const m = models.find((x) => x.id === id);
+  if (m) return m;
+  // Fallback: check static list even if a custom list was provided.
+  const s = STATIC_MODELS.find((x) => x.id === id);
+  if (s) return s;
+  // For dynamically-fetched models not yet in any list, return a stub
+  // so callers don't crash.
+  return {
+    id,
+    provider: "github-copilot",
+    label: id,
+    hint: "Model",
+    description: "",
+    capabilities: { intelligence: 3, speed: 3, cost: 3 },
+  };
 }
 
 export const DEFAULT_MODEL_ID: ModelId = "gpt-4o";
@@ -333,8 +361,10 @@ export const DEFAULT_AUTOCOMPLETE_MODEL: Partial<Record<ProviderId, string>> = {
 };
 
 /** Curated list of fast models suitable for inline completion (speed ≥ 4). */
-export function getAutocompleteEligibleModels(): readonly ModelInfo[] {
-  return MODELS.filter((m) => m.capabilities.speed >= 4);
+export function getAutocompleteEligibleModels(
+  models: readonly ModelInfo[] = STATIC_MODELS,
+): readonly ModelInfo[] {
+  return models.filter((m) => m.capabilities.speed >= 4);
 }
 
 export const AZURE_OPENAI_DEFAULT_ENDPOINT = "";

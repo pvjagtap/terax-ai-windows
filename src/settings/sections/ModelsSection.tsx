@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
-  MODELS,
   PROVIDERS,
   getAutocompleteEligibleModels,
   getModel,
@@ -17,9 +16,15 @@ import {
   providerNeedsKey,
   providerSupportsKey,
   type ModelId,
+  type ModelInfo,
   type ProviderId,
 } from "@/modules/ai/config";
 import { clearKey, getAllKeys, setKey } from "@/modules/ai/lib/keyring";
+import {
+  useAllModels,
+  useModelRegistry,
+} from "@/modules/ai/lib/model-registry";
+import { toggleFavoriteModel } from "@/modules/ai/lib/modelPrefs";
 import { usePreferencesStore } from "@/modules/settings/preferences";
 import {
   emitKeysChanged,
@@ -32,6 +37,7 @@ import {
 } from "@/modules/settings/store";
 import {
   ArrowDown01Icon,
+  StarIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useMemo, useState } from "react";
@@ -45,9 +51,21 @@ type KeysMap = Record<ProviderId, string | null>;
 export function ModelsSection() {
   const [keys, setKeys] = useState<KeysMap | null>(null);
   const defaultModel = usePreferencesStore((s) => s.defaultModelId);
+  const refreshCopilotModels = useModelRegistry(
+    (s) => s.refreshCopilotModels,
+  );
+  const copilotLastFetched = useModelRegistry((s) => s.lastFetchedAt);
 
   useEffect(() => {
-    void getAllKeys().then(setKeys);
+    void getAllKeys().then((k) => {
+      setKeys(k);
+      // Auto-fetch Copilot models if signed in and not yet fetched.
+      if (k["github-copilot"] && !copilotLastFetched) {
+        void refreshCopilotModels();
+      }
+    });
+    // Only run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onSave = async (provider: ProviderId, value: string) => {
@@ -97,6 +115,10 @@ export function ModelsSection() {
                   const fresh = await getAllKeys();
                   setKeys(fresh);
                   await emitKeysChanged();
+                  // Fetch available models now that we're signed in.
+                  if (fresh["github-copilot"]) {
+                    void refreshCopilotModels();
+                  }
                 }}
               />
             ) : (
@@ -126,13 +148,20 @@ function DefaultModelBlock({
   defaultModel: ModelId;
   keys: KeysMap;
 }) {
-  const m = getModel(defaultModel);
+  const allModels = useAllModels();
+  const favoriteIds = usePreferencesStore((s) => s.favoriteModelIds);
+  const m = getModel(defaultModel, allModels);
 
   const isAvailable = (_modelId: string, providerId: ProviderId): boolean => {
-    // Copilot uses OAuth — check if OAuth token is present in keyring.
     if (providerId === "github-copilot") return !!keys[providerId];
     return providerNeedsKey(providerId) ? !!keys[providerId] : true;
   };
+
+  // Favorites that exist in the current model list.
+  const favoriteModels = useMemo(
+    () => allModels.filter((x) => favoriteIds.includes(x.id)),
+    [allModels, favoriteIds],
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -160,8 +189,47 @@ function DefaultModelBlock({
           align="start"
           className="max-h-[28rem] min-w-[280px] overflow-y-auto"
         >
+          {/* ── Favorites section ── */}
+          {favoriteModels.length > 0 && (
+            <div className="px-1 pt-1 pb-0.5 border-b border-border/50 mb-0.5">
+              <div className="mb-0.5 flex items-center gap-1.5 px-2 text-[10px] font-medium tracking-wide text-amber-500/90 uppercase">
+                <HugeiconsIcon icon={StarIcon} size={11} strokeWidth={2} className="fill-amber-500" />
+                <span>Favorites</span>
+              </div>
+              {favoriteModels.map((mod) => {
+                const available = isAvailable(mod.id, mod.provider);
+                return (
+                  <DropdownMenuItem
+                    key={`fav-${mod.id}`}
+                    disabled={!available}
+                    onSelect={() =>
+                      available && void setDefaultModel(mod.id as ModelId)
+                    }
+                    className={cn(
+                      "flex items-center gap-2 text-[12px]",
+                      mod.id === defaultModel && "bg-accent/50",
+                    )}
+                  >
+                    <FavStar
+                      modelId={mod.id}
+                      favorite
+                    />
+                    <ProviderIcon provider={mod.provider} size={11} />
+                    <span className="flex flex-1 flex-col">
+                      <span>{mod.label}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {mod.description}
+                      </span>
+                    </span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── Provider sections ── */}
           {PROVIDERS.map((p) => {
-            const models = MODELS.filter((x) => x.provider === p.id);
+            const models = allModels.filter((x) => x.provider === p.id);
             if (models.length === 0) return null;
             const hasKey =
               p.id === "github-copilot"
@@ -182,6 +250,7 @@ function DefaultModelBlock({
                 </div>
                 {models.map((mod) => {
                   const available = isAvailable(mod.id, p.id);
+                  const isFav = favoriteIds.includes(mod.id);
                   return (
                     <DropdownMenuItem
                       key={mod.id}
@@ -190,10 +259,11 @@ function DefaultModelBlock({
                         available && void setDefaultModel(mod.id as ModelId)
                       }
                       className={cn(
-                        "flex items-start gap-2 text-[12px]",
+                        "flex items-center gap-2 text-[12px]",
                         mod.id === defaultModel && "bg-accent/50",
                       )}
                     >
+                      <FavStar modelId={mod.id} favorite={isFav} />
                       <span className="flex flex-1 flex-col">
                         <span>{mod.label}</span>
                         <span className="text-[10px] text-muted-foreground">
@@ -268,14 +338,19 @@ function AutocompleteBlock({ keys }: { keys: KeysMap }) {
   const enabled = usePreferencesStore((s) => s.autocompleteEnabled);
   const provider = usePreferencesStore((s) => s.autocompleteProvider);
   const modelId = usePreferencesStore((s) => s.autocompleteModelId);
-  const eligible = useMemo(() => getAutocompleteEligibleModels(), []);
+  const favoriteIds = usePreferencesStore((s) => s.favoriteModelIds);
+  const allModels = useAllModels();
+  const eligible = useMemo(
+    () => getAutocompleteEligibleModels(allModels),
+    [allModels],
+  );
 
   const currentModel = useMemo(
     () =>
-      MODELS.find((m) => m.provider === provider && m.id === modelId) ??
-      MODELS.find((m) => m.id === modelId) ??
+      allModels.find((m) => m.provider === provider && m.id === modelId) ??
+      allModels.find((m) => m.id === modelId) ??
       eligible[0],
-    [eligible, provider, modelId],
+    [allModels, eligible, provider, modelId],
   );
 
   const setModel = (id: string, providerId: ProviderId) => {
@@ -283,15 +358,17 @@ function AutocompleteBlock({ keys }: { keys: KeysMap }) {
     void setAutocompleteModelId(id);
   };
 
-  const hasKey = providerSupportsKey(provider)
-    ? providerNeedsKey(provider)
-      ? !!keys[provider]
-      : true
-    : true;
+  const hasKey = provider === "github-copilot"
+    ? !!keys["github-copilot"]
+    : providerSupportsKey(provider)
+      ? providerNeedsKey(provider)
+        ? !!keys[provider]
+        : true
+      : true;
 
   // Group eligible models by provider for the dropdown.
   const grouped = useMemo(() => {
-    const map = new Map<ProviderId, (typeof eligible)[number][]>();
+    const map = new Map<ProviderId, ModelInfo[]>();
     for (const m of eligible) {
       const arr = map.get(m.provider) ?? [];
       arr.push(m);
@@ -299,6 +376,12 @@ function AutocompleteBlock({ keys }: { keys: KeysMap }) {
     }
     return map;
   }, [eligible]);
+
+  // Eligible favorites.
+  const favEligible = useMemo(
+    () => eligible.filter((m) => favoriteIds.includes(m.id)),
+    [eligible, favoriteIds],
+  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -343,6 +426,44 @@ function AutocompleteBlock({ keys }: { keys: KeysMap }) {
               align="start"
               className="max-h-[24rem] min-w-[280px] overflow-y-auto"
             >
+              {/* ── Eligible favorites ── */}
+              {favEligible.length > 0 && (
+                <div className="px-1 pt-1 pb-0.5 border-b border-border/50 mb-0.5">
+                  <div className="mb-0.5 flex items-center gap-1.5 px-2 text-[10px] font-medium tracking-wide text-amber-500/90 uppercase">
+                    <HugeiconsIcon icon={StarIcon} size={11} strokeWidth={2} className="fill-amber-500" />
+                    <span>Favorites</span>
+                  </div>
+                  {favEligible.map((m) => {
+                    const pHasKey =
+                      m.provider === "github-copilot"
+                        ? !!keys[m.provider]
+                        : providerNeedsKey(m.provider)
+                          ? !!keys[m.provider]
+                          : true;
+                    return (
+                      <DropdownMenuItem
+                        key={`fav-${m.id}`}
+                        disabled={!pHasKey}
+                        onSelect={() => pHasKey && setModel(m.id, m.provider)}
+                        className={cn(
+                          "flex items-center gap-2 text-[11.5px]",
+                          m.id === modelId && "bg-accent/50",
+                        )}
+                      >
+                        <FavStar modelId={m.id} favorite />
+                        <ProviderIcon provider={m.provider} size={11} />
+                        <span className="flex flex-col">
+                          <span>{m.label}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {m.description}
+                          </span>
+                        </span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </div>
+              )}
+
               {PROVIDERS.map((p) => {
                 const list = grouped.get(p.id);
                 if (!list || list.length === 0) return null;
@@ -359,28 +480,32 @@ function AutocompleteBlock({ keys }: { keys: KeysMap }) {
                       <span>{p.label}</span>
                       {!pHasKey ? (
                         <span className="ml-auto text-[9.5px] normal-case tracking-normal text-muted-foreground/70">
-                          no key
+                          {p.id === "github-copilot" ? "not signed in" : "no key"}
                         </span>
                       ) : null}
                     </div>
-                    {list.map((m) => (
-                      <DropdownMenuItem
-                        key={m.id}
-                        disabled={!pHasKey}
-                        onSelect={() => pHasKey && setModel(m.id, p.id)}
-                        className={cn(
-                          "text-[11.5px]",
-                          m.id === modelId && "bg-accent/50",
-                        )}
-                      >
-                        <span className="flex flex-col">
-                          <span>{m.label}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {m.description}
+                    {list.map((m) => {
+                      const isFav = favoriteIds.includes(m.id);
+                      return (
+                        <DropdownMenuItem
+                          key={m.id}
+                          disabled={!pHasKey}
+                          onSelect={() => pHasKey && setModel(m.id, p.id)}
+                          className={cn(
+                            "flex items-center gap-2 text-[11.5px]",
+                            m.id === modelId && "bg-accent/50",
+                          )}
+                        >
+                          <FavStar modelId={m.id} favorite={isFav} />
+                          <span className="flex flex-col">
+                            <span>{m.label}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {m.description}
+                            </span>
                           </span>
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
+                        </DropdownMenuItem>
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -396,6 +521,40 @@ function AutocompleteBlock({ keys }: { keys: KeysMap }) {
         ) : null}
       </div>
     </div>
+  );
+}
+
+/** Inline star toggle for favoriting models inside dropdowns. */
+function FavStar({
+  modelId,
+  favorite,
+}: {
+  modelId: string;
+  favorite: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void toggleFavoriteModel(modelId);
+      }}
+      title={favorite ? "Unfavorite" : "Favorite"}
+      className={cn(
+        "shrink-0 rounded p-0.5 transition-colors",
+        favorite
+          ? "text-amber-500"
+          : "text-muted-foreground/40 hover:text-amber-500",
+      )}
+    >
+      <HugeiconsIcon
+        icon={StarIcon}
+        size={11}
+        strokeWidth={favorite ? 2 : 1.75}
+        className={favorite ? "fill-amber-500" : ""}
+      />
+    </button>
   );
 }
 

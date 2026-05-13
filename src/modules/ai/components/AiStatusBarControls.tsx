@@ -33,10 +33,9 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { motion } from "motion/react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import {
   getModel,
-  MODELS,
   providerNeedsKey,
   PROVIDERS,
   type ModelCapabilities,
@@ -46,6 +45,7 @@ import {
 } from "../config";
 import { ACCEPTED_FILES, useComposer } from "../lib/composer";
 import { toggleFavoriteModel } from "../lib/modelPrefs";
+import { useAllModels, useModelRegistry } from "../lib/model-registry";
 import { useChatStore } from "../store/chatStore";
 import { usePreferencesStore } from "@/modules/settings/preferences";
 
@@ -193,17 +193,36 @@ function ModelDropdown() {
   const setSelected = useChatStore((s) => s.setSelectedModelId);
   const favoriteIds = usePreferencesStore((s) => s.favoriteModelIds);
   const recentIds = usePreferencesStore((s) => s.recentModelIds);
-  const current = getModel(selected);
+  const allModels = useAllModels();
+  const refreshCopilotModels = useModelRegistry((s) => s.refreshCopilotModels);
+  const copilotLastFetched = useModelRegistry((s) => s.lastFetchedAt);
+  const current = getModel(selected, allModels);
   const [search, setSearch] = useState("");
   const [activeProvider, setActiveProvider] = useState<ProviderId | null>(null);
   const [tab, setTab] = useState<Tab>("all");
   const inputRef = useRef<HTMLInputElement>(null);
-  const currentProviderHasKey = providerNeedsKey(current.provider)
-    ? !!apiKeys[current.provider]
-    : true;
+
+  // Auto-fetch Copilot models once if signed in but not yet fetched.
+  useEffect(() => {
+    if (apiKeys["github-copilot"] && !copilotLastFetched) {
+      void refreshCopilotModels();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKeys["github-copilot"]]);
+
+  const currentProviderHasKey =
+    current.provider === "github-copilot"
+      ? !!apiKeys["github-copilot"]
+      : providerNeedsKey(current.provider)
+        ? !!apiKeys[current.provider]
+        : true;
 
   const hasKeyFor = (id: ProviderId) =>
-    providerNeedsKey(id) ? !!apiKeys[id] : true;
+    id === "github-copilot"
+      ? !!apiKeys["github-copilot"]
+      : providerNeedsKey(id)
+        ? !!apiKeys[id]
+        : true;
 
   const sortedProviders = useMemo(() => {
     const configured: (typeof PROVIDERS)[number][] = [];
@@ -217,7 +236,7 @@ function ModelDropdown() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let pool: readonly ModelInfo[] = MODELS;
+    let pool: readonly ModelInfo[] = allModels;
     if (tab === "favorites") {
       pool = pool.filter((m) => favoriteIds.includes(m.id));
     } else if (tab === "recent") {
@@ -241,7 +260,7 @@ function ModelDropdown() {
       );
     }
     return pool;
-  }, [activeProvider, favoriteIds, recentIds, search, tab]);
+  }, [activeProvider, allModels, favoriteIds, recentIds, search, tab]);
 
   return (
     <DropdownMenu>

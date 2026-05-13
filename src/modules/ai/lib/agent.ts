@@ -18,6 +18,7 @@ import {
   type ProviderId,
 } from "../config";
 import type { ProviderKeys } from "./keyring";
+import { getAllModels, useModelRegistry } from "./model-registry";
 import { getCopilotSession } from "./copilot-auth";
 import { proxyFetch } from "./proxyFetch";
 import { buildTools, type ToolContext } from "../tools/tools";
@@ -164,7 +165,11 @@ function buildModel(
   azureOpenaiEndpoint?: string,
   azureClaudeEndpoint?: string,
 ): Promise<LanguageModel> {
-  const m = getModel(modelId);
+  // Use the dynamic model registry when available so that
+  // runtime-fetched Copilot models are correctly resolved.
+  const { copilotModels } = useModelRegistry.getState();
+  const allModels = getAllModels(copilotModels);
+  const m = getModel(modelId, allModels);
   const resolvedId: string = m.id;
   return buildLanguageModel(m.provider, keys, resolvedId, {
     azureOpenaiEndpoint,
