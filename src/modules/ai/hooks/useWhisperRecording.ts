@@ -1,7 +1,7 @@
-import { createOpenAI } from "@ai-sdk/openai";
-import { experimental_transcribe as transcribe } from "ai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/chatStore";
+import { usePreferencesStore } from "../../settings/preferences";
+import { AZURE_OPENAI_DEFAULT_ENDPOINT } from "../config";
 
 const MIME_CANDIDATES = [
   "audio/webm;codecs=opus",
@@ -18,14 +18,24 @@ function pickMime(): string | undefined {
   return undefined;
 }
 
-async function transcribeBlob(blob: Blob, apiKey: string): Promise<string> {
-  const openai = createOpenAI({ apiKey });
-  const buf = new Uint8Array(await blob.arrayBuffer());
-  const { text } = await transcribe({
-    model: openai.transcription("whisper-1"),
-    audio: buf,
+async function transcribeBlob(
+  blob: Blob,
+  apiKey: string,
+  endpoint: string,
+): Promise<string> {
+  const base = endpoint.replace(/\/+$/, "");
+  const url = `${base}/openai/deployments/whisper/audio/transcriptions?api-version=2024-06-01`;
+  const form = new FormData();
+  form.append("file", blob, "audio.webm");
+  form.append("model", "whisper-1");
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "api-key": apiKey },
+    body: form,
   });
-  return text;
+  if (!res.ok) throw new Error(`Whisper API ${res.status}: ${res.statusText}`);
+  const data = (await res.json()) as { text: string };
+  return data.text;
 }
 
 type State = "idle" | "recording" | "transcribing";
@@ -35,7 +45,10 @@ export function useWhisperRecording({
 }: {
   onResult: (text: string) => void;
 }) {
-  const apiKey = useChatStore((s) => s.apiKeys.openai);
+  const apiKey = useChatStore((s) => s.apiKeys["azure-openai"]);
+  const azureEndpoint = usePreferencesStore(
+    (s) => s.azureOpenaiEndpoint || AZURE_OPENAI_DEFAULT_ENDPOINT,
+  );
   const [state, setState] = useState<State>("idle");
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -79,7 +92,7 @@ export function useWhisperRecording({
         }
         setState("transcribing");
         try {
-          const text = await transcribeBlob(blob, apiKey);
+          const text = await transcribeBlob(blob, apiKey, azureEndpoint);
           if (text.trim()) onResult(text.trim());
         } catch (e) {
           console.error("whisper.transcribe", e);
@@ -95,7 +108,7 @@ export function useWhisperRecording({
       teardownStream();
       setState("idle");
     }
-  }, [apiKey, onResult, state, supported]);
+  }, [apiKey, azureEndpoint, onResult, state, supported]);
 
   useEffect(() => {
     return () => {

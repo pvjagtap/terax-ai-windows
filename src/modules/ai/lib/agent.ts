@@ -10,7 +10,8 @@ import {
   DEFAULT_MODEL_ID,
   getModel,
   getModelContextLimit,
-  LMSTUDIO_DEFAULT_BASE_URL,
+  AZURE_OPENAI_DEFAULT_ENDPOINT,
+  GITHUB_MODELS_BASE_URL,
   MAX_AGENT_STEPS,
   providerNeedsKey,
   selectSystemPrompt,
@@ -56,8 +57,8 @@ function ellipsize(s: string, max: number): string {
 
 export type BuildModelOptions = {
   modelIdOverride?: string;
-  lmstudioBaseURL?: string;
-  openaiCompatibleBaseURL?: string;
+  azureOpenaiEndpoint?: string;
+  azureClaudeEndpoint?: string;
 };
 
 const modelCache = new Map<string, LanguageModel>();
@@ -74,94 +75,58 @@ export async function buildLanguageModel(
     );
   }
   const key = keys[provider] ?? "";
-  const lmstudioURL = options.lmstudioBaseURL ?? LMSTUDIO_DEFAULT_BASE_URL;
-  const compatURL = options.openaiCompatibleBaseURL ?? "";
-  const cacheKey = `${provider} ${key} ${resolvedModelId} ${lmstudioURL} ${compatURL}`;
+  const azureEndpoint = options.azureOpenaiEndpoint ?? AZURE_OPENAI_DEFAULT_ENDPOINT;
+  const azureClaudeEndpoint = options.azureClaudeEndpoint ?? "";
+  const cacheKey = `${provider} ${key} ${resolvedModelId} ${azureEndpoint} ${azureClaudeEndpoint}`;
   const hit = modelCache.get(cacheKey);
   if (hit) return hit;
 
   let built: LanguageModel;
   switch (provider) {
-    case "openai": {
-      const { createOpenAI } = await import("@ai-sdk/openai");
-      built = createOpenAI({ apiKey: key })(resolvedModelId);
-      break;
-    }
-    case "anthropic": {
-      const { createAnthropic } = await import("@ai-sdk/anthropic");
-      built = createAnthropic({ apiKey: key })(resolvedModelId);
-      break;
-    }
-    case "google": {
-      const { createGoogleGenerativeAI } = await import("@ai-sdk/google");
-      built = createGoogleGenerativeAI({ apiKey: key })(resolvedModelId);
-      break;
-    }
-    case "xai": {
-      const { createXai } = await import("@ai-sdk/xai");
-      built = createXai({ apiKey: key })(resolvedModelId);
-      break;
-    }
-    case "cerebras": {
-      const { createCerebras } = await import("@ai-sdk/cerebras");
-      built = createCerebras({ apiKey: key })(resolvedModelId);
-      break;
-    }
-    case "deepseek": {
-      const { createOpenAICompatible } = await import(
-        "@ai-sdk/openai-compatible"
-      );
-      built = createOpenAICompatible({
-        name: "deepseek",
-        baseURL: "https://api.deepseek.com",
-        apiKey: key,
-      })(resolvedModelId);
-      break;
-    }
-    case "groq": {
-      const { createGroq } = await import("@ai-sdk/groq");
-      built = createGroq({ apiKey: key })(resolvedModelId);
-      break;
-    }
-    case "openrouter": {
-      const { createOpenAICompatible } = await import(
-        "@ai-sdk/openai-compatible"
-      );
-      built = createOpenAICompatible({
-        name: "openrouter",
-        baseURL: "https://openrouter.ai/api/v1",
-        apiKey: key,
-        headers: {
-          "HTTP-Referer": "https://terax.ai",
-          "X-Title": "Terax",
-        },
-      })(resolvedModelId);
-      break;
-    }
-    case "openai-compatible": {
-      if (!compatURL) {
+    case "azure-openai": {
+      if (!azureEndpoint) {
         throw new Error(
-          "OpenAI-compatible provider has no base URL. Set it in Settings → Models.",
+          "Azure OpenAI: no endpoint URL configured. Set it in Settings → Models.",
         );
       }
       const { createOpenAICompatible } = await import(
         "@ai-sdk/openai-compatible"
       );
       built = createOpenAICompatible({
-        name: "openai-compatible",
-        baseURL: compatURL,
-        apiKey: key || undefined,
+        name: "azure-openai",
+        baseURL: `${azureEndpoint.replace(/\/$/, "")}/openai/deployments`,
+        apiKey: key,
+        headers: { "api-key": key },
+        queryParams: { "api-version": "2024-08-01-preview" },
         fetch: proxyFetch,
       })(resolvedModelId);
       break;
     }
-    case "lmstudio": {
+    case "github-copilot": {
       const { createOpenAICompatible } = await import(
         "@ai-sdk/openai-compatible"
       );
       built = createOpenAICompatible({
-        name: "lmstudio",
-        baseURL: lmstudioURL,
+        name: "github-copilot",
+        baseURL: GITHUB_MODELS_BASE_URL,
+        apiKey: key,
+        fetch: proxyFetch,
+      })(resolvedModelId);
+      break;
+    }
+    case "azure-claude": {
+      if (!azureClaudeEndpoint) {
+        throw new Error(
+          "Azure Claude: no endpoint URL configured. Set it in Settings → Models.",
+        );
+      }
+      const { createOpenAICompatible } = await import(
+        "@ai-sdk/openai-compatible"
+      );
+      built = createOpenAICompatible({
+        name: "azure-claude",
+        baseURL: azureClaudeEndpoint.replace(/\/$/, ""),
+        apiKey: key,
         fetch: proxyFetch,
       })(resolvedModelId);
       break;
@@ -178,31 +143,14 @@ export async function buildLanguageModel(
 function buildModel(
   modelId: ModelId,
   keys: ProviderKeys,
-  lmstudioBaseURL?: string,
-  lmstudioModelId?: string,
-  openaiCompatibleBaseURL?: string,
-  openaiCompatibleModelId?: string,
+  azureOpenaiEndpoint?: string,
+  azureClaudeEndpoint?: string,
 ): Promise<LanguageModel> {
   const m = getModel(modelId);
-  let resolvedId: string = m.id;
-  if (m.id === "lmstudio-local") {
-    if (!lmstudioModelId?.trim()) {
-      throw new Error(
-        "LM Studio: no model id set. Open Settings → Models and enter the model id loaded in LM Studio.",
-      );
-    }
-    resolvedId = lmstudioModelId.trim();
-  } else if (m.id === "openai-compatible-custom") {
-    if (!openaiCompatibleModelId?.trim()) {
-      throw new Error(
-        "OpenAI-compatible: no model id set. Open Settings → Models.",
-      );
-    }
-    resolvedId = openaiCompatibleModelId.trim();
-  }
+  const resolvedId: string = m.id;
   return buildLanguageModel(m.provider, keys, resolvedId, {
-    lmstudioBaseURL,
-    openaiCompatibleBaseURL,
+    azureOpenaiEndpoint,
+    azureClaudeEndpoint,
   });
 }
 
@@ -229,24 +177,13 @@ function buildStableSystem(
   return `${base}${memoryBlock}${personaBlock}${customBlock}`;
 }
 
-// OpenAI / Gemini / DeepSeek apply prefix caching automatically; only
-// Anthropic needs explicit breakpoints. Mark the stable system prefix and
-// the rotating conversation tail.
+// Azure-hosted Claude behind OpenAI-compatible API does not use Anthropic's
+// cache breakpoints, so we skip explicit markers for all providers.
 function applyCacheBreakpoints(
   messages: ModelMessage[],
-  provider: ProviderId,
+  _provider: ProviderId,
 ): ModelMessage[] {
-  if (provider !== "anthropic" || messages.length === 0) return messages;
-  const marker = { anthropic: { cacheControl: { type: "ephemeral" as const } } };
-  const withMarker = (m: ModelMessage): ModelMessage => ({
-    ...m,
-    providerOptions: { ...(m.providerOptions ?? {}), ...marker },
-  });
-  const out = messages.slice();
-  out[0] = withMarker(out[0]);
-  const lastIdx = out.length - 1;
-  if (lastIdx > 0) out[lastIdx] = withMarker(out[lastIdx]);
-  return out;
+  return messages;
 }
 
 export type AgentUsage = {
@@ -269,10 +206,8 @@ export type RunAgentOptions = {
   toolContext: ToolContext;
   onStep?: (step: string | null) => void;
   onUsage?: (delta: AgentUsage) => void;
-  lmstudioBaseURL?: string;
-  lmstudioModelId?: string;
-  openaiCompatibleBaseURL?: string;
-  openaiCompatibleModelId?: string;
+  azureOpenaiEndpoint?: string;
+  azureClaudeEndpoint?: string;
   planMode?: boolean;
   projectMemory?: string | null;
   envBlock?: string | null;
@@ -285,10 +220,8 @@ export async function runAgentStream(opts: RunAgentOptions) {
   const model = await buildModel(
     modelId,
     opts.keys,
-    opts.lmstudioBaseURL,
-    opts.lmstudioModelId,
-    opts.openaiCompatibleBaseURL,
-    opts.openaiCompatibleModelId,
+    opts.azureOpenaiEndpoint,
+    opts.azureClaudeEndpoint,
   );
   const provider = getModel(modelId).provider;
 

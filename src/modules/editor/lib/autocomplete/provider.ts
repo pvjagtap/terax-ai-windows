@@ -1,6 +1,6 @@
 import {
   DEFAULT_AUTOCOMPLETE_MODEL,
-  LMSTUDIO_DEFAULT_BASE_URL,
+  AZURE_OPENAI_DEFAULT_ENDPOINT,
   type AutocompleteProviderId,
 } from "@/modules/ai/config";
 import { buildLanguageModel } from "@/modules/ai/lib/agent";
@@ -15,16 +15,12 @@ import {
 export type CompletionDeps = {
   provider: AutocompleteProviderId;
   modelId: string;
-  /** API key for the configured provider, or null for keyless (LM Studio). */
+  /** API key for the configured provider. */
   apiKey: string | null;
-  lmstudioBaseURL: string;
+  azureOpenaiEndpoint: string;
 };
 
 const MAX_OUTPUT_TOKENS_DEFAULT = 128;
-// Reasoning models burn output tokens on internal thought before producing
-// any visible content; with a tight cap they finish_reason="length" with
-// empty text. The trim step still caps visible output at MAX_LINES.
-const MAX_OUTPUT_TOKENS_REASONING = 1024;
 
 export async function requestCompletion(
   req: CompletionRequest,
@@ -40,29 +36,17 @@ export async function requestCompletion(
   }
   const keys = { ...EMPTY_PROVIDER_KEYS, [deps.provider]: deps.apiKey };
   const model = await buildLanguageModel(deps.provider, keys, modelId, {
-    lmstudioBaseURL: deps.lmstudioBaseURL || LMSTUDIO_DEFAULT_BASE_URL,
+    azureOpenaiEndpoint: deps.azureOpenaiEndpoint || AZURE_OPENAI_DEFAULT_ENDPOINT,
   });
-
-  const isReasoning = /\bgpt-oss\b/i.test(modelId);
-  const providerOptions = isReasoning
-    ? {
-        cerebras: { reasoningEffort: "low" },
-        groq: { reasoningEffort: "low" },
-        openai: { reasoningEffort: "low" },
-      }
-    : undefined;
 
   const { text } = await generateText({
     model,
     system: COMPLETION_SYSTEM_PROMPT,
     prompt: buildUserPrompt(req),
-    maxOutputTokens: isReasoning
-      ? MAX_OUTPUT_TOKENS_REASONING
-      : MAX_OUTPUT_TOKENS_DEFAULT,
+    maxOutputTokens: MAX_OUTPUT_TOKENS_DEFAULT,
     maxRetries: 0,
     abortSignal: signal,
     temperature: 0.2,
-    ...(providerOptions ? { providerOptions } : {}),
   });
 
   return cleanCompletion(text);

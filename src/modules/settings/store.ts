@@ -3,8 +3,8 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   DEFAULT_AUTOCOMPLETE_MODEL,
   DEFAULT_MODEL_ID,
-  LMSTUDIO_DEFAULT_BASE_URL,
-  OPENAI_COMPATIBLE_DEFAULT_BASE_URL,
+  AZURE_OPENAI_DEFAULT_ENDPOINT,
+  AZURE_CLAUDE_DEFAULT_ENDPOINT,
   type AutocompleteProviderId,
   type ModelId,
 } from "@/modules/ai/config";
@@ -48,10 +48,8 @@ export type Preferences = {
   autocompleteEnabled: boolean;
   autocompleteProvider: AutocompleteProviderId;
   autocompleteModelId: string;
-  lmstudioBaseURL: string;
-  lmstudioModelId: string;
-  openaiCompatibleBaseURL: string;
-  openaiCompatibleModelId: string;
+  azureOpenaiEndpoint: string;
+  azureClaudeEndpoint: string;
   favoriteModelIds: string[];
   recentModelIds: string[];
   vimMode: boolean;
@@ -71,10 +69,8 @@ const KEY_RESTORE_WINDOW = "restoreWindowState";
 const KEY_AUTOCOMPLETE_ENABLED = "autocompleteEnabled";
 const KEY_AUTOCOMPLETE_PROVIDER = "autocompleteProvider";
 const KEY_AUTOCOMPLETE_MODEL = "autocompleteModelId";
-const KEY_LMSTUDIO_BASE_URL = "lmstudioBaseURL";
-const KEY_LMSTUDIO_MODEL_ID = "lmstudioModelId";
-const KEY_OPENAI_COMPAT_BASE_URL = "openaiCompatibleBaseURL";
-const KEY_OPENAI_COMPAT_MODEL_ID = "openaiCompatibleModelId";
+const KEY_AZURE_OPENAI_ENDPOINT = "azureOpenaiEndpoint";
+const KEY_AZURE_CLAUDE_ENDPOINT = "azureClaudeEndpoint";
 const KEY_FAVORITE_MODELS = "favoriteModelIds";
 const KEY_RECENT_MODELS = "recentModelIds";
 const KEY_VIM_MODE = "vimMode";
@@ -100,12 +96,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
   autostart: false,
   restoreWindowState: true,
   autocompleteEnabled: false,
-  autocompleteProvider: "cerebras",
-  autocompleteModelId: DEFAULT_AUTOCOMPLETE_MODEL.cerebras ?? "",
-  lmstudioBaseURL: LMSTUDIO_DEFAULT_BASE_URL,
-  lmstudioModelId: "",
-  openaiCompatibleBaseURL: OPENAI_COMPATIBLE_DEFAULT_BASE_URL,
-  openaiCompatibleModelId: "",
+  autocompleteProvider: "azure-openai",
+  autocompleteModelId: DEFAULT_AUTOCOMPLETE_MODEL["azure-openai"] ?? "",
+  azureOpenaiEndpoint: AZURE_OPENAI_DEFAULT_ENDPOINT,
+  azureClaudeEndpoint: AZURE_CLAUDE_DEFAULT_ENDPOINT,
   favoriteModelIds: [],
   recentModelIds: [],
   vimMode: false,
@@ -157,16 +151,10 @@ export async function loadPreferences(): Promise<Preferences> {
     autocompleteModelId:
       get<string>(KEY_AUTOCOMPLETE_MODEL) ??
       DEFAULT_PREFERENCES.autocompleteModelId,
-    lmstudioBaseURL:
-      get<string>(KEY_LMSTUDIO_BASE_URL) ?? DEFAULT_PREFERENCES.lmstudioBaseURL,
-    lmstudioModelId:
-      get<string>(KEY_LMSTUDIO_MODEL_ID) ?? DEFAULT_PREFERENCES.lmstudioModelId,
-    openaiCompatibleBaseURL:
-      get<string>(KEY_OPENAI_COMPAT_BASE_URL) ??
-      DEFAULT_PREFERENCES.openaiCompatibleBaseURL,
-    openaiCompatibleModelId:
-      get<string>(KEY_OPENAI_COMPAT_MODEL_ID) ??
-      DEFAULT_PREFERENCES.openaiCompatibleModelId,
+    azureOpenaiEndpoint:
+      get<string>(KEY_AZURE_OPENAI_ENDPOINT) ?? DEFAULT_PREFERENCES.azureOpenaiEndpoint,
+    azureClaudeEndpoint:
+      get<string>(KEY_AZURE_CLAUDE_ENDPOINT) ?? DEFAULT_PREFERENCES.azureClaudeEndpoint,
     favoriteModelIds:
       get<string[]>(KEY_FAVORITE_MODELS) ??
       DEFAULT_PREFERENCES.favoriteModelIds,
@@ -227,20 +215,12 @@ export async function setAutocompleteModelId(value: string): Promise<void> {
   await writePref(KEY_AUTOCOMPLETE_MODEL, value);
 }
 
-export async function setLmstudioBaseURL(value: string): Promise<void> {
-  await writePref(KEY_LMSTUDIO_BASE_URL, value);
+export async function setAzureOpenaiEndpoint(value: string): Promise<void> {
+  await writePref(KEY_AZURE_OPENAI_ENDPOINT, value);
 }
 
-export async function setLmstudioModelId(value: string): Promise<void> {
-  await writePref(KEY_LMSTUDIO_MODEL_ID, value);
-}
-
-export async function setOpenaiCompatibleBaseURL(value: string): Promise<void> {
-  await writePref(KEY_OPENAI_COMPAT_BASE_URL, value);
-}
-
-export async function setOpenaiCompatibleModelId(value: string): Promise<void> {
-  await writePref(KEY_OPENAI_COMPAT_MODEL_ID, value);
+export async function setAzureClaudeEndpoint(value: string): Promise<void> {
+  await writePref(KEY_AZURE_CLAUDE_ENDPOINT, value);
 }
 
 export async function setFavoriteModelIds(value: string[]): Promise<void> {
@@ -301,10 +281,8 @@ export async function onPreferencesChange(
     [KEY_AUTOCOMPLETE_ENABLED]: "autocompleteEnabled",
     [KEY_AUTOCOMPLETE_PROVIDER]: "autocompleteProvider",
     [KEY_AUTOCOMPLETE_MODEL]: "autocompleteModelId",
-    [KEY_LMSTUDIO_BASE_URL]: "lmstudioBaseURL",
-    [KEY_LMSTUDIO_MODEL_ID]: "lmstudioModelId",
-    [KEY_OPENAI_COMPAT_BASE_URL]: "openaiCompatibleBaseURL",
-    [KEY_OPENAI_COMPAT_MODEL_ID]: "openaiCompatibleModelId",
+    [KEY_AZURE_OPENAI_ENDPOINT]: "azureOpenaiEndpoint",
+    [KEY_AZURE_CLAUDE_ENDPOINT]: "azureClaudeEndpoint",
     [KEY_FAVORITE_MODELS]: "favoriteModelIds",
     [KEY_RECENT_MODELS]: "recentModelIds",
     [KEY_VIM_MODE]: "vimMode",

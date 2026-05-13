@@ -1,16 +1,9 @@
 export const KEYRING_SERVICE = "terax-ai";
 
 export type ProviderId =
-  | "openai"
-  | "anthropic"
-  | "google"
-  | "xai"
-  | "cerebras"
-  | "groq"
-  | "deepseek"
-  | "openrouter"
-  | "openai-compatible"
-  | "lmstudio";
+  | "azure-openai"
+  | "github-copilot"
+  | "azure-claude";
 
 export type ProviderInfo = {
   id: ProviderId;
@@ -24,75 +17,25 @@ export type ProviderInfo = {
 
 export const PROVIDERS: readonly ProviderInfo[] = [
   {
-    id: "openai",
-    label: "OpenAI",
-    keyringAccount: "openai-api-key",
-    keyPrefix: "sk-",
-    consoleUrl: "https://platform.openai.com/api-keys",
-  },
-  {
-    id: "anthropic",
-    label: "Anthropic",
-    keyringAccount: "anthropic-api-key",
-    keyPrefix: "sk-ant-",
-    consoleUrl: "https://console.anthropic.com/settings/keys",
-  },
-  {
-    id: "google",
-    label: "Google",
-    keyringAccount: "google-api-key",
+    id: "azure-openai",
+    label: "Azure OpenAI",
+    keyringAccount: "azure-openai-api-key",
     keyPrefix: null,
-    consoleUrl: "https://aistudio.google.com/apikey",
+    consoleUrl: "https://portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/OpenAI",
   },
   {
-    id: "xai",
-    label: "xAI",
-    keyringAccount: "xai-api-key",
-    keyPrefix: "xai-",
-    consoleUrl: "https://console.x.ai/",
-  },
-  {
-    id: "cerebras",
-    label: "Cerebras",
-    keyringAccount: "cerebras-api-key",
-    keyPrefix: "csk-",
-    consoleUrl: "https://cloud.cerebras.ai/",
-  },
-  {
-    id: "groq",
-    label: "Groq",
-    keyringAccount: "groq-api-key",
-    keyPrefix: "gsk_",
-    consoleUrl: "https://console.groq.com/keys",
-  },
-  {
-    id: "deepseek",
-    label: "DeepSeek",
-    keyringAccount: "deepseek-api-key",
-    keyPrefix: "sk-",
-    consoleUrl: "https://platform.deepseek.com/api_keys",
-  },
-  {
-    id: "openrouter",
-    label: "OpenRouter",
-    keyringAccount: "openrouter-api-key",
-    keyPrefix: "sk-or-",
-    consoleUrl: "https://openrouter.ai/keys",
-  },
-  {
-    id: "openai-compatible",
-    label: "OpenAI Compatible",
-    keyringAccount: "openai-compatible-api-key",
+    id: "github-copilot",
+    label: "GitHub Copilot",
+    keyringAccount: "github-copilot-token",
     keyPrefix: null,
-    consoleUrl: "https://platform.openai.com/docs/api-reference",
-    keyOptional: true,
+    consoleUrl: "https://github.com/settings/tokens",
   },
   {
-    id: "lmstudio",
-    label: "LM Studio",
-    keyringAccount: "",
+    id: "azure-claude",
+    label: "Azure Claude",
+    keyringAccount: "azure-claude-api-key",
     keyPrefix: null,
-    consoleUrl: "https://lmstudio.ai/docs/basics/server",
+    consoleUrl: "https://ai.azure.com",
   },
 ] as const;
 
@@ -126,400 +69,136 @@ export type ModelInfo = {
 };
 
 export const MODELS = [
-  // ── OpenAI ────────────────────────────────────────────────────────────────
+  // ── Azure OpenAI ──────────────────────────────────────────────────────────
   {
-    id: "gpt-5.5",
-    provider: "openai",
-    label: "GPT-5.5",
+    id: "gpt-4o",
+    provider: "azure-openai",
+    label: "GPT-4o",
     hint: "Flagship",
-    description: "Frontier reasoning and code.",
-    capabilities: { intelligence: 5, speed: 3, cost: 1 },
-    tags: ["vision", "reasoning", "tools", "coding"],
-  },
-  {
-    id: "gpt-5.4-mini",
-    provider: "openai",
-    label: "GPT-5.4 mini",
-    hint: "Fast",
-    description: "Snappy default at low cost.",
-    capabilities: { intelligence: 4, speed: 4, cost: 4 },
-    tags: ["vision", "tools"],
-  },
-  {
-    id: "gpt-5.4-nano",
-    provider: "openai",
-    label: "GPT-5.4 nano",
-    hint: "Fastest",
-    description: "Tiny and instant — great for autocomplete.",
-    capabilities: { intelligence: 3, speed: 5, cost: 5 },
-    tags: ["tools"],
-  },
-  {
-    id: "gpt-5.3-codex",
-    provider: "openai",
-    label: "GPT-5.3 Codex",
-    hint: "Coding",
-    description: "Tuned for code and tool use.",
-    capabilities: { intelligence: 4, speed: 4, cost: 3 },
-    tags: ["tools", "coding"],
-  },
-  {
-    id: "gpt-4.1-mini",
-    provider: "openai",
-    label: "GPT-4.1 mini",
-    hint: "Cheap",
-    description: "Ultra-cheap workhorse for bulk tasks.",
-    capabilities: { intelligence: 3, speed: 4, cost: 5 },
-    tags: ["vision", "tools"],
-  },
-
-  // ── Anthropic ─────────────────────────────────────────────────────────────
-  {
-    id: "claude-opus-4-7",
-    provider: "anthropic",
-    label: "Claude Opus 4.7",
-    hint: "Best",
-    description: "Anthropic's flagship for long reasoning.",
-    capabilities: { intelligence: 5, speed: 2, cost: 1 },
-    tags: ["vision", "reasoning", "tools", "coding"],
-  },
-  {
-    id: "claude-sonnet-4-6",
-    provider: "anthropic",
-    label: "Claude Sonnet 4.6",
-    hint: "Balanced",
-    description: "Sweet spot of quality and speed.",
-    capabilities: { intelligence: 4, speed: 4, cost: 3 },
-    tags: ["vision", "tools", "coding"],
-  },
-  {
-    id: "claude-haiku-4-5",
-    provider: "anthropic",
-    label: "Claude Haiku 4.5",
-    hint: "Fast",
-    description: "Quick, cheap, multimodal.",
-    capabilities: { intelligence: 3, speed: 5, cost: 4 },
-    tags: ["vision", "tools"],
-  },
-  {
-    id: "claude-opus-4-6",
-    provider: "anthropic",
-    label: "Claude Opus 4.6",
-    hint: "Legacy",
-    description: "Previous-gen Opus.",
-    capabilities: { intelligence: 5, speed: 2, cost: 1 },
-    tags: ["vision", "reasoning", "tools", "coding"],
-  },
-
-  // ── Google ────────────────────────────────────────────────────────────────
-  {
-    id: "gemini-3.1-pro-preview",
-    provider: "google",
-    label: "Gemini 3.1 Pro",
-    hint: "Flagship",
-    description: "Strong reasoning, 1M context.",
+    description: "OpenAI's flagship multimodal model on Azure.",
     capabilities: { intelligence: 5, speed: 3, cost: 2 },
     tags: ["vision", "reasoning", "tools", "coding"],
   },
   {
-    id: "gemini-3-flash-preview",
-    provider: "google",
-    label: "Gemini 3 Flash",
+    id: "gpt-4o-mini",
+    provider: "azure-openai",
+    label: "GPT-4o mini",
     hint: "Fast",
-    description: "Fast multimodal, 1M context.",
+    description: "Fast and cost-effective on Azure.",
     capabilities: { intelligence: 4, speed: 5, cost: 4 },
     tags: ["vision", "tools"],
   },
   {
-    id: "gemini-2.5-pro",
-    provider: "google",
-    label: "Gemini 2.5 Pro",
+    id: "gpt-4-turbo",
+    provider: "azure-openai",
+    label: "GPT-4 Turbo",
     hint: "Stable",
-    description: "Production-stable Gemini.",
-    capabilities: { intelligence: 4, speed: 3, cost: 3 },
+    description: "Production-stable GPT-4 on Azure.",
+    capabilities: { intelligence: 4, speed: 3, cost: 2 },
     tags: ["vision", "tools", "coding"],
   },
   {
-    id: "gemini-2.5-flash",
-    provider: "google",
-    label: "Gemini 2.5 Flash",
-    hint: "Cheap",
-    description: "Bulk throughput at low cost.",
-    capabilities: { intelligence: 3, speed: 5, cost: 5 },
-    tags: ["vision", "tools"],
+    id: "o1-preview",
+    provider: "azure-openai",
+    label: "o1-preview",
+    hint: "Reasoning",
+    description: "Advanced reasoning model on Azure.",
+    capabilities: { intelligence: 5, speed: 2, cost: 1 },
+    tags: ["reasoning", "tools", "coding"],
+  },
+  {
+    id: "o1-mini",
+    provider: "azure-openai",
+    label: "o1-mini",
+    hint: "Fast Reasoning",
+    description: "Lightweight reasoning model on Azure.",
+    capabilities: { intelligence: 4, speed: 4, cost: 3 },
+    tags: ["reasoning", "tools", "coding"],
+  },
+  {
+    id: "o3-mini",
+    provider: "azure-openai",
+    label: "o3-mini",
+    hint: "Latest Reasoning",
+    description: "Latest small reasoning model on Azure.",
+    capabilities: { intelligence: 5, speed: 4, cost: 3 },
+    tags: ["reasoning", "tools", "coding"],
   },
 
-  // ── xAI ───────────────────────────────────────────────────────────────────
+  // ── GitHub Copilot (GitHub Models) ────────────────────────────────────────
   {
-    id: "grok-4.20-reasoning",
-    provider: "xai",
-    label: "Grok 4.20 Reasoning",
-    hint: "Reasoning",
-    description: "Frontier reasoning with extended thinking.",
+    id: "github/gpt-4o",
+    provider: "github-copilot",
+    label: "GPT-4o",
+    hint: "Copilot",
+    description: "GPT-4o via GitHub Models.",
+    capabilities: { intelligence: 5, speed: 3, cost: 3 },
+    tags: ["vision", "reasoning", "tools", "coding"],
+  },
+  {
+    id: "github/gpt-4o-mini",
+    provider: "github-copilot",
+    label: "GPT-4o mini",
+    hint: "Copilot Fast",
+    description: "Fast GPT-4o mini via GitHub Models.",
+    capabilities: { intelligence: 4, speed: 5, cost: 4 },
+    tags: ["vision", "tools"],
+  },
+  {
+    id: "github/o1-preview",
+    provider: "github-copilot",
+    label: "o1-preview",
+    hint: "Copilot Reasoning",
+    description: "o1-preview via GitHub Models.",
     capabilities: { intelligence: 5, speed: 2, cost: 2 },
     tags: ["reasoning", "tools", "coding"],
   },
   {
-    id: "grok-4.20-non-reasoning",
-    provider: "xai",
-    label: "Grok 4.20",
-    hint: "Fast",
-    description: "Fast tier for chat and tools.",
+    id: "github/o1-mini",
+    provider: "github-copilot",
+    label: "o1-mini",
+    hint: "Copilot Fast Reasoning",
+    description: "o1-mini via GitHub Models.",
     capabilities: { intelligence: 4, speed: 4, cost: 3 },
-    tags: ["tools"],
-  },
-  {
-    id: "grok-4-fast-reasoning",
-    provider: "xai",
-    label: "Grok 4 Fast",
-    hint: "Reasoning",
-    description: "Cheaper Grok 4 with vision and reasoning.",
-    capabilities: { intelligence: 4, speed: 4, cost: 4 },
-    tags: ["vision", "reasoning", "tools"],
-  },
-
-  // ── DeepSeek ──────────────────────────────────────────────────────────────
-  {
-    id: "deepseek-v4-pro",
-    provider: "deepseek",
-    label: "DeepSeek V4 Pro",
-    hint: "Best",
-    description: "Strong open-weight code model.",
-    capabilities: { intelligence: 5, speed: 3, cost: 4 },
     tags: ["reasoning", "tools", "coding"],
   },
   {
-    id: "deepseek-v4-flash",
-    provider: "deepseek",
-    label: "DeepSeek V4 Flash",
-    hint: "Fast",
-    description: "Cheap and fast everyday tier.",
-    capabilities: { intelligence: 4, speed: 5, cost: 5 },
-    tags: ["tools"],
-  },
-  {
-    id: "deepseek-reasoner",
-    provider: "deepseek",
-    label: "DeepSeek Reasoner",
-    hint: "Thinking",
-    description: "Chain-of-thought at open-weight prices.",
-    capabilities: { intelligence: 5, speed: 2, cost: 4 },
-    tags: ["reasoning", "coding"],
+    id: "github/claude-3.5-sonnet",
+    provider: "github-copilot",
+    label: "Claude 3.5 Sonnet",
+    hint: "Copilot Claude",
+    description: "Anthropic Claude 3.5 Sonnet via GitHub Models.",
+    capabilities: { intelligence: 5, speed: 4, cost: 3 },
+    tags: ["vision", "tools", "coding"],
   },
 
-  // ── Cerebras (autocomplete-tier) ──────────────────────────────────────────
+  // ── Azure Claude (Azure AI Foundry) ───────────────────────────────────────
   {
-    id: "gpt-oss-120b",
-    provider: "cerebras",
-    label: "GPT-OSS 120B",
-    hint: "Ultra-fast",
-    description: "Fastest inference on Cerebras silicon.",
-    capabilities: { intelligence: 4, speed: 5, cost: 4 },
-    tags: ["tools", "coding"],
+    id: "claude-3.5-sonnet",
+    provider: "azure-claude",
+    label: "Claude 3.5 Sonnet",
+    hint: "Balanced",
+    description: "Anthropic Claude 3.5 Sonnet on Azure AI Foundry.",
+    capabilities: { intelligence: 5, speed: 4, cost: 3 },
+    tags: ["vision", "tools", "coding"],
   },
   {
-    id: "llama3.3-70b",
-    provider: "cerebras",
-    label: "Llama 3.3 70B",
-    hint: "Fast",
-    description: "Meta's open model on wafer-scale silicon.",
-    capabilities: { intelligence: 3, speed: 5, cost: 5 },
-    tags: ["tools"],
-  },
-  {
-    id: "qwen-3-32b",
-    provider: "cerebras",
-    label: "Qwen 3 32B",
-    hint: "Fast",
-    description: "Multilingual model at extreme speed.",
-    capabilities: { intelligence: 3, speed: 5, cost: 5 },
-    tags: ["tools", "coding"],
-  },
-
-  // ── Groq (autocomplete-tier) ──────────────────────────────────────────────
-  {
-    id: "openai/gpt-oss-20b",
-    provider: "groq",
-    label: "GPT-OSS 20B",
-    hint: "Ultra-fast",
-    description: "Sub-second responses on Groq LPU.",
-    capabilities: { intelligence: 3, speed: 5, cost: 5 },
-    tags: ["tools", "coding"],
-  },
-  {
-    id: "llama-3.3-70b-versatile",
-    provider: "groq",
-    label: "Llama 3.3 70B",
-    hint: "Versatile",
-    description: "Fast and broadly capable.",
-    capabilities: { intelligence: 4, speed: 5, cost: 5 },
-    tags: ["tools"],
-  },
-  {
-    id: "deepseek-r1-distill-llama-70b",
-    provider: "groq",
-    label: "DeepSeek R1 Distill 70B",
-    hint: "Thinking",
-    description: "Reasoning-distilled Llama on Groq.",
-    capabilities: { intelligence: 4, speed: 5, cost: 5 },
-    tags: ["reasoning", "tools"],
-  },
-
-  // ── OpenRouter (gateway — curated cross-provider routes) ──────────────────
-  {
-    id: "anthropic/claude-opus-4-7",
-    provider: "openrouter",
-    label: "Claude Opus 4.7",
-    hint: "OpenRouter",
-    description: "Anthropic flagship via OpenRouter.",
+    id: "claude-3-opus",
+    provider: "azure-claude",
+    label: "Claude 3 Opus",
+    hint: "Best",
+    description: "Anthropic Claude 3 Opus on Azure AI Foundry.",
     capabilities: { intelligence: 5, speed: 2, cost: 1 },
     tags: ["vision", "reasoning", "tools", "coding"],
   },
   {
-    id: "anthropic/claude-sonnet-4-6",
-    provider: "openrouter",
-    label: "Claude Sonnet 4.6",
-    hint: "OpenRouter",
-    description: "Balanced Claude via OpenRouter.",
-    capabilities: { intelligence: 4, speed: 4, cost: 3 },
-    tags: ["vision", "tools", "coding"],
-  },
-  {
-    id: "openai/gpt-5.5",
-    provider: "openrouter",
-    label: "GPT-5.5",
-    hint: "OpenRouter",
-    description: "OpenAI flagship via OpenRouter.",
-    capabilities: { intelligence: 5, speed: 3, cost: 1 },
-    tags: ["vision", "reasoning", "tools", "coding"],
-  },
-  {
-    id: "openai/gpt-5.4-mini",
-    provider: "openrouter",
-    label: "GPT-5.4 mini",
-    hint: "OpenRouter",
-    description: "Snappy GPT via OpenRouter.",
-    capabilities: { intelligence: 4, speed: 4, cost: 4 },
+    id: "claude-3-haiku",
+    provider: "azure-claude",
+    label: "Claude 3 Haiku",
+    hint: "Fast",
+    description: "Fast Claude on Azure AI Foundry.",
+    capabilities: { intelligence: 3, speed: 5, cost: 5 },
     tags: ["vision", "tools"],
-  },
-  {
-    id: "google/gemini-3.1-pro-preview",
-    provider: "openrouter",
-    label: "Gemini 3.1 Pro",
-    hint: "OpenRouter",
-    description: "Google flagship via OpenRouter.",
-    capabilities: { intelligence: 5, speed: 3, cost: 2 },
-    tags: ["vision", "reasoning", "tools", "coding"],
-  },
-  {
-    id: "x-ai/grok-4.20-reasoning",
-    provider: "openrouter",
-    label: "Grok 4.20 Reasoning",
-    hint: "OpenRouter",
-    description: "xAI reasoning via OpenRouter.",
-    capabilities: { intelligence: 5, speed: 2, cost: 2 },
-    tags: ["reasoning", "tools", "coding"],
-  },
-  {
-    id: "deepseek/deepseek-v4-pro",
-    provider: "openrouter",
-    label: "DeepSeek V4 Pro",
-    hint: "OpenRouter",
-    description: "Open-weight coding model.",
-    capabilities: { intelligence: 5, speed: 3, cost: 5 },
-    tags: ["reasoning", "tools", "coding"],
-  },
-  {
-    id: "deepseek/deepseek-reasoner",
-    provider: "openrouter",
-    label: "DeepSeek Reasoner",
-    hint: "OpenRouter",
-    description: "Cheap chain-of-thought reasoner.",
-    capabilities: { intelligence: 5, speed: 2, cost: 5 },
-    tags: ["reasoning", "coding"],
-  },
-  {
-    id: "meta-llama/llama-4-scout-17b-16e-instruct",
-    provider: "openrouter",
-    label: "Llama 4 Scout",
-    hint: "OpenRouter",
-    description: "Meta's efficient multimodal model.",
-    capabilities: { intelligence: 4, speed: 4, cost: 5 },
-    tags: ["vision", "tools"],
-  },
-  {
-    id: "meta-llama/llama-4-maverick",
-    provider: "openrouter",
-    label: "Llama 4 Maverick",
-    hint: "OpenRouter",
-    description: "Meta's flagship open multimodal model.",
-    capabilities: { intelligence: 4, speed: 3, cost: 5 },
-    tags: ["vision", "tools", "coding"],
-  },
-  {
-    id: "moonshotai/kimi-k2.5",
-    provider: "openrouter",
-    label: "Kimi K2.5",
-    hint: "OpenRouter",
-    description: "Moonshot's agentic flagship.",
-    capabilities: { intelligence: 5, speed: 3, cost: 4 },
-    tags: ["vision", "tools", "coding"],
-  },
-  {
-    id: "qwen/qwen3-max",
-    provider: "openrouter",
-    label: "Qwen 3 Max",
-    hint: "OpenRouter",
-    description: "Alibaba's multilingual reasoner.",
-    capabilities: { intelligence: 5, speed: 3, cost: 4 },
-    tags: ["reasoning", "tools", "coding"],
-  },
-  {
-    id: "qwen/qwen3-coder",
-    provider: "openrouter",
-    label: "Qwen 3 Coder",
-    hint: "OpenRouter",
-    description: "Qwen tuned for code.",
-    capabilities: { intelligence: 4, speed: 4, cost: 5 },
-    tags: ["tools", "coding"],
-  },
-  {
-    id: "mistralai/mistral-large-latest",
-    provider: "openrouter",
-    label: "Mistral Large",
-    hint: "OpenRouter",
-    description: "EU-hosted general-purpose flagship.",
-    capabilities: { intelligence: 4, speed: 4, cost: 3 },
-    tags: ["tools", "coding"],
-  },
-  {
-    id: "z-ai/glm-4.6",
-    provider: "openrouter",
-    label: "GLM 4.6",
-    hint: "OpenRouter",
-    description: "Zhipu's long-context agentic model.",
-    capabilities: { intelligence: 4, speed: 4, cost: 4 },
-    tags: ["tools", "coding"],
-  },
-
-  // ── Generic OpenAI-compatible (user-defined endpoint) ─────────────────────
-  {
-    id: "openai-compatible-custom",
-    provider: "openai-compatible",
-    label: "Custom endpoint",
-    hint: "Configurable",
-    description: "Any OpenAI-compatible endpoint.",
-    capabilities: { intelligence: 3, speed: 3, cost: 3 },
-  },
-
-  // ── LM Studio (local; model id is user-supplied at runtime) ───────────────
-  {
-    id: "lmstudio-local",
-    provider: "lmstudio",
-    label: "LM Studio",
-    hint: "Local",
-    description: "Local GGUF models via LM Studio.",
-    capabilities: { intelligence: 3, speed: 3, cost: 5 },
   },
 ] as const satisfies readonly ModelInfo[];
 
@@ -531,54 +210,24 @@ export function getModel(id: ModelId): ModelInfo {
   return m;
 }
 
-export const DEFAULT_MODEL_ID: ModelId = "gpt-5.4-mini";
+export const DEFAULT_MODEL_ID: ModelId = "gpt-4o";
 
-/** Approximate context window (in tokens) per model. Used for the
- *  context-usage indicator in the AI mini-window header. Conservative
- *  estimates — actual provider limits may shift. */
+/** Approximate context window (in tokens) per model. */
 export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
-  "gpt-5.5": 1_050_000,
-  "gpt-5.4-mini": 400_000,
-  "gpt-5.4-nano": 400_000,
-  "gpt-5.3-codex": 400_000,
-  "gpt-4.1-mini": 128_000,
-  "claude-opus-4-7": 200_000,
-  "claude-sonnet-4-6": 200_000,
-  "claude-haiku-4-5": 200_000,
-  "claude-opus-4-6": 200_000,
-  "gemini-3.1-pro-preview": 1_000_000,
-  "gemini-3-flash-preview": 1_000_000,
-  "gemini-2.5-pro": 1_000_000,
-  "gemini-2.5-flash": 1_000_000,
-  "grok-4.20-reasoning": 2_000_000,
-  "grok-4.20-non-reasoning": 2_000_000,
-  "grok-4-fast-reasoning": 2_000_000,
-  "deepseek-v4-pro": 1_000_000,
-  "deepseek-v4-flash": 1_000_000,
-  "deepseek-reasoner": 128_000,
-  "gpt-oss-120b": 128_000,
-  "llama3.3-70b": 128_000,
-  "qwen-3-32b": 32_000,
-  "openai/gpt-oss-20b": 128_000,
-  "llama-3.3-70b-versatile": 128_000,
-  "deepseek-r1-distill-llama-70b": 128_000,
-  "anthropic/claude-opus-4-7": 200_000,
-  "anthropic/claude-sonnet-4-6": 200_000,
-  "openai/gpt-5.5": 1_050_000,
-  "openai/gpt-5.4-mini": 400_000,
-  "google/gemini-3.1-pro-preview": 1_000_000,
-  "x-ai/grok-4.20-reasoning": 2_000_000,
-  "deepseek/deepseek-v4-pro": 1_000_000,
-  "deepseek/deepseek-reasoner": 128_000,
-  "meta-llama/llama-4-scout-17b-16e-instruct": 128_000,
-  "meta-llama/llama-4-maverick": 128_000,
-  "moonshotai/kimi-k2.5": 256_000,
-  "qwen/qwen3-max": 256_000,
-  "qwen/qwen3-coder": 256_000,
-  "mistralai/mistral-large-latest": 128_000,
-  "z-ai/glm-4.6": 128_000,
-  "openai-compatible-custom": 128_000,
-  "lmstudio-local": 32_000,
+  "gpt-4o": 128_000,
+  "gpt-4o-mini": 128_000,
+  "gpt-4-turbo": 128_000,
+  "o1-preview": 128_000,
+  "o1-mini": 128_000,
+  "o3-mini": 200_000,
+  "github/gpt-4o": 128_000,
+  "github/gpt-4o-mini": 128_000,
+  "github/o1-preview": 128_000,
+  "github/o1-mini": 128_000,
+  "github/claude-3.5-sonnet": 200_000,
+  "claude-3.5-sonnet": 200_000,
+  "claude-3-opus": 200_000,
+  "claude-3-haiku": 200_000,
 };
 
 export function getModelContextLimit(modelId: string | undefined): number {
@@ -593,25 +242,15 @@ export type ModelPricing = {
 };
 
 export const MODEL_PRICING: Record<string, ModelPricing> = {
-  "gpt-5.5": { input: 5, output: 15, cacheRead: 0.5 },
-  "gpt-5.4-mini": { input: 0.4, output: 1.6, cacheRead: 0.04 },
-  "gpt-5.4-nano": { input: 0.1, output: 0.4, cacheRead: 0.01 },
-  "gpt-5.3-codex": { input: 1.5, output: 6, cacheRead: 0.15 },
-  "gpt-4.1-mini": { input: 0.4, output: 1.6, cacheRead: 0.1 },
-  "claude-opus-4-7": { input: 15, output: 75, cacheRead: 1.5 },
-  "claude-opus-4-6": { input: 15, output: 75, cacheRead: 1.5 },
-  "claude-sonnet-4-6": { input: 3, output: 15, cacheRead: 0.3 },
-  "claude-haiku-4-5": { input: 1, output: 5, cacheRead: 0.1 },
-  "gemini-3.1-pro-preview": { input: 1.25, output: 10, cacheRead: 0.31 },
-  "gemini-3-flash-preview": { input: 0.3, output: 2.5, cacheRead: 0.075 },
-  "gemini-2.5-pro": { input: 1.25, output: 10, cacheRead: 0.31 },
-  "gemini-2.5-flash": { input: 0.3, output: 2.5, cacheRead: 0.075 },
-  "grok-4.20-reasoning": { input: 3, output: 15 },
-  "grok-4.20-non-reasoning": { input: 1, output: 5 },
-  "grok-4-fast-reasoning": { input: 0.2, output: 0.5 },
-  "deepseek-v4-pro": { input: 0.28, output: 1.1, cacheRead: 0.028 },
-  "deepseek-v4-flash": { input: 0.07, output: 0.27, cacheRead: 0.007 },
-  "deepseek-reasoner": { input: 0.55, output: 2.19, cacheRead: 0.14 },
+  "gpt-4o": { input: 2.5, output: 10, cacheRead: 1.25 },
+  "gpt-4o-mini": { input: 0.15, output: 0.6, cacheRead: 0.075 },
+  "gpt-4-turbo": { input: 10, output: 30 },
+  "o1-preview": { input: 15, output: 60 },
+  "o1-mini": { input: 3, output: 12 },
+  "o3-mini": { input: 1.1, output: 4.4 },
+  "claude-3.5-sonnet": { input: 3, output: 15, cacheRead: 0.3 },
+  "claude-3-opus": { input: 15, output: 75, cacheRead: 1.5 },
+  "claude-3-haiku": { input: 0.25, output: 1.25, cacheRead: 0.03 },
 };
 
 export function estimateCost(
@@ -629,51 +268,34 @@ export function estimateCost(
   );
 }
 
-/** Providers that do not require an API key (local servers, key-optional). */
-export const KEYLESS_PROVIDERS: readonly ProviderId[] = [
-  "lmstudio",
-  "openai-compatible",
-] as const;
-
-export function providerNeedsKey(id: ProviderId): boolean {
-  return !KEYLESS_PROVIDERS.includes(id);
+/** All providers require an API key / token. */
+export function providerNeedsKey(_id: ProviderId): boolean {
+  return true;
 }
 
-/** True for providers that accept an API key — required *or* optional.
- *  Used by Settings to decide whether to render a key card at all. */
-export function providerSupportsKey(id: ProviderId): boolean {
-  if (providerNeedsKey(id)) return true;
-  const p = getProvider(id);
-  return !!p.keyOptional;
+/** All providers support API keys. */
+export function providerSupportsKey(_id: ProviderId): boolean {
+  return true;
 }
 
-/** Any provider can power the editor's inline autocomplete; latency is the
- *  user's choice. The picker filters down to fast tiers in the UI. */
+/** Any provider can power the editor's inline autocomplete. */
 export type AutocompleteProviderId = ProviderId;
 
 /** Sensible default model id per provider for inline autocomplete. */
 export const DEFAULT_AUTOCOMPLETE_MODEL: Partial<Record<ProviderId, string>> = {
-  cerebras: "gpt-oss-120b",
-  groq: "openai/gpt-oss-20b",
-  lmstudio: "qwen2.5-coder-7b-instruct",
-  openai: "gpt-5.4-nano",
-  anthropic: "claude-haiku-4-5",
-  google: "gemini-2.5-flash",
-  xai: "grok-4-fast-reasoning",
-  deepseek: "deepseek-v4-flash",
-  openrouter: "openai/gpt-5.4-mini",
-  "openai-compatible": "",
+  "azure-openai": "gpt-4o-mini",
+  "github-copilot": "github/gpt-4o-mini",
+  "azure-claude": "claude-3-haiku",
 };
 
 /** Curated list of fast models suitable for inline completion (speed ≥ 4). */
 export function getAutocompleteEligibleModels(): readonly ModelInfo[] {
-  return MODELS.filter(
-    (m) => m.capabilities.speed >= 4 && m.id !== "openai-compatible-custom",
-  );
+  return MODELS.filter((m) => m.capabilities.speed >= 4);
 }
 
-export const LMSTUDIO_DEFAULT_BASE_URL = "http://localhost:1234/v1";
-export const OPENAI_COMPATIBLE_DEFAULT_BASE_URL = "";
+export const AZURE_OPENAI_DEFAULT_ENDPOINT = "";
+export const AZURE_CLAUDE_DEFAULT_ENDPOINT = "";
+export const GITHUB_MODELS_BASE_URL = "https://models.inference.ai.azure.com";
 export const MAX_AGENT_STEPS = 24;
 export const TERMINAL_BUFFER_LINES = 300;
 
@@ -733,17 +355,11 @@ Rules:
 - Concise. No filler.`;
 
 const LITE_SYSTEM_PROMPT_MODEL_IDS = new Set<string>([
-  "gpt-5.4-nano",
-  "gpt-4.1-mini",
-  "claude-haiku-4-5",
-  "gemini-2.5-flash",
-  "gemini-3-flash-preview",
-  "deepseek-v4-flash",
-  "gpt-oss-120b",
-  "openai/gpt-oss-20b",
-  "llama3.3-70b",
-  "llama-3.3-70b-versatile",
-  "qwen-3-32b",
+  "gpt-4o-mini",
+  "github/gpt-4o-mini",
+  "o1-mini",
+  "github/o1-mini",
+  "claude-3-haiku",
 ]);
 
 export function selectSystemPrompt(modelId: string | undefined): string {

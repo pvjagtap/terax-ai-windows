@@ -71,10 +71,6 @@ export const EditorPane = forwardRef<EditorPaneHandle, Props>(
       let cancelled = false;
       const refresh = async () => {
         const provider = usePreferencesStore.getState().autocompleteProvider;
-        if (provider === "lmstudio") {
-          apiKeyRef.current = null;
-          return;
-        }
         const k = await getKey(provider);
         if (!cancelled) apiKeyRef.current = k;
       };
@@ -135,7 +131,7 @@ export const EditorPane = forwardRef<EditorPaneHandle, Props>(
               provider: s.autocompleteProvider,
               modelId: s.autocompleteModelId,
               apiKey: apiKeyRef.current,
-              lmstudioBaseURL: s.lmstudioBaseURL,
+              azureOpenaiEndpoint: s.azureOpenaiEndpoint,
             };
           },
           getPath: () => pathRef.current,

@@ -46,10 +46,8 @@ type Deps = {
   getCustomInstructions: () => string;
   getAgentPersona: () => { name: string; instructions: string } | null;
   getLive: () => LiveSnapshot;
-  getLmstudioBaseURL?: () => string | undefined;
-  getLmstudioModelId?: () => string | undefined;
-  getOpenaiCompatibleBaseURL?: () => string | undefined;
-  getOpenaiCompatibleModelId?: () => string | undefined;
+  getAzureOpenaiEndpoint?: () => string | undefined;
+  getAzureClaudeEndpoint?: () => string | undefined;
   onStep?: (step: string | null) => void;
   onUsage?: (delta: AgentUsage) => void;
   getPlanMode?: () => boolean;
@@ -74,10 +72,8 @@ export function createContextAwareTransport(deps: Deps) {
       toolContext: deps.toolContext,
       onStep: deps.onStep,
       onUsage: deps.onUsage,
-      lmstudioBaseURL: deps.getLmstudioBaseURL?.(),
-      lmstudioModelId: deps.getLmstudioModelId?.(),
-      openaiCompatibleBaseURL: deps.getOpenaiCompatibleBaseURL?.(),
-      openaiCompatibleModelId: deps.getOpenaiCompatibleModelId?.(),
+      azureOpenaiEndpoint: deps.getAzureOpenaiEndpoint?.(),
+      azureClaudeEndpoint: deps.getAzureClaudeEndpoint?.(),
       planMode: deps.getPlanMode?.(),
       projectMemory,
       envBlock,

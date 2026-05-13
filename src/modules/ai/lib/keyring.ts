@@ -10,16 +10,9 @@ import {
 export type ProviderKeys = Record<ProviderId, string | null>;
 
 export const EMPTY_PROVIDER_KEYS: ProviderKeys = {
-  openai: null,
-  anthropic: null,
-  google: null,
-  xai: null,
-  cerebras: null,
-  groq: null,
-  deepseek: null,
-  openrouter: null,
-  "openai-compatible": null,
-  lmstudio: null,
+  "azure-openai": null,
+  "github-copilot": null,
+  "azure-claude": null,
 };
 
 export async function getKey(provider: ProviderId): Promise<string | null> {

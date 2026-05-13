@@ -237,12 +237,10 @@ function makeChat(sessionId: string): Chat<UIMessage> {
       };
     },
     getPlanMode: () => usePlanStore.getState().active,
-    getLmstudioBaseURL: () => usePreferencesStore.getState().lmstudioBaseURL,
-    getLmstudioModelId: () => usePreferencesStore.getState().lmstudioModelId,
-    getOpenaiCompatibleBaseURL: () =>
-      usePreferencesStore.getState().openaiCompatibleBaseURL,
-    getOpenaiCompatibleModelId: () =>
-      usePreferencesStore.getState().openaiCompatibleModelId,
+    getAzureOpenaiEndpoint: () =>
+      usePreferencesStore.getState().azureOpenaiEndpoint,
+    getAzureClaudeEndpoint: () =>
+      usePreferencesStore.getState().azureClaudeEndpoint,
     onStep: (step) => {
       useChatStore.getState().patchAgentMeta({ step });
     },

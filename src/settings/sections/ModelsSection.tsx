@@ -27,16 +27,11 @@ import {
   setAutocompleteModelId,
   setAutocompleteProvider,
   setDefaultModel,
-  setLmstudioBaseURL,
-  setLmstudioModelId,
-  setOpenaiCompatibleBaseURL,
-  setOpenaiCompatibleModelId,
+  setAzureOpenaiEndpoint,
+  setAzureClaudeEndpoint,
 } from "@/modules/settings/store";
-import { invoke } from "@tauri-apps/api/core";
 import {
   ArrowDown01Icon,
-  CheckmarkCircle02Icon,
-  Cancel01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useMemo, useState } from "react";
@@ -49,10 +44,6 @@ type KeysMap = Record<ProviderId, string | null>;
 export function ModelsSection() {
   const [keys, setKeys] = useState<KeysMap | null>(null);
   const defaultModel = usePreferencesStore((s) => s.defaultModelId);
-  const lmstudioModelId = usePreferencesStore((s) => s.lmstudioModelId);
-  const openaiCompatModelId = usePreferencesStore(
-    (s) => s.openaiCompatibleModelId,
-  );
 
   useEffect(() => {
     void getAllKeys().then(setKeys);
@@ -74,35 +65,29 @@ export function ModelsSection() {
     return <div className="text-[12px] text-muted-foreground">Loading…</div>;
   }
 
-  const cloudProviders = PROVIDERS.filter(
-    (p) =>
-      providerNeedsKey(p.id) && p.id !== "lmstudio" && p.id !== "openai-compatible",
-  );
-  const configuredCount = cloudProviders.filter((p) => !!keys[p.id]).length;
+  const configuredCount = PROVIDERS.filter((p) => !!keys[p.id]).length;
 
   return (
     <div className="flex flex-col gap-7">
       <SectionHeader
         title="Models"
-        description="Bring your own keys. They live in your OS keychain and are used only by Terax."
+        description="Configure your Azure and GitHub Copilot endpoints. Keys live in your OS keychain."
       />
 
       <DefaultModelBlock
         defaultModel={defaultModel}
         keys={keys}
-        lmstudioModelId={lmstudioModelId}
-        openaiCompatModelId={openaiCompatModelId}
       />
 
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
-          <Label>Cloud providers</Label>
+          <Label>Providers</Label>
           <span className="text-[10.5px] text-muted-foreground">
-            {configuredCount} of {cloudProviders.length} configured
+            {configuredCount} of {PROVIDERS.length} configured
           </span>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {cloudProviders.map((p) => (
+          {PROVIDERS.map((p) => (
             <ProviderKeyCard
               key={p.id}
               provider={p}
@@ -114,13 +99,7 @@ export function ModelsSection() {
         </div>
       </div>
 
-      <LocalModelsBlock />
-
-      <OpenAICompatibleBlock
-        compatKey={keys["openai-compatible"]}
-        onSaveKey={(v) => onSave("openai-compatible", v)}
-        onClearKey={() => onClear("openai-compatible")}
-      />
+      <AzureEndpointsBlock />
 
       <AutocompleteBlock keys={keys} />
     </div>
@@ -130,20 +109,13 @@ export function ModelsSection() {
 function DefaultModelBlock({
   defaultModel,
   keys,
-  lmstudioModelId,
-  openaiCompatModelId,
 }: {
   defaultModel: ModelId;
   keys: KeysMap;
-  lmstudioModelId: string;
-  openaiCompatModelId: string;
 }) {
   const m = getModel(defaultModel);
 
-  const isAvailable = (modelId: string, providerId: ProviderId): boolean => {
-    if (modelId === "lmstudio-local") return !!lmstudioModelId.trim();
-    if (modelId === "openai-compatible-custom")
-      return !!openaiCompatModelId.trim();
+  const isAvailable = (_modelId: string, providerId: ProviderId): boolean => {
     return providerNeedsKey(providerId) ? !!keys[providerId] : true;
   };
 
@@ -220,224 +192,53 @@ function DefaultModelBlock({
   );
 }
 
-function LocalModelsBlock() {
-  const baseURL = usePreferencesStore((s) => s.lmstudioBaseURL);
-  const modelId = usePreferencesStore((s) => s.lmstudioModelId);
-  const [urlDraft, setUrlDraft] = useState(baseURL);
-  const [modelDraft, setModelDraft] = useState(modelId);
-  const [testStatus, setTestStatus] = useState<
-    "idle" | "testing" | "ok" | "fail"
-  >("idle");
+function AzureEndpointsBlock() {
+  const azureEndpoint = usePreferencesStore((s) => s.azureOpenaiEndpoint);
+  const claudeEndpoint = usePreferencesStore((s) => s.azureClaudeEndpoint);
+  const [azureDraft, setAzureDraft] = useState(azureEndpoint);
+  const [claudeDraft, setClaudeDraft] = useState(claudeEndpoint);
 
-  useEffect(() => setUrlDraft(baseURL), [baseURL]);
-  useEffect(() => setModelDraft(modelId), [modelId]);
-
-  const test = async () => {
-    setTestStatus("testing");
-    try {
-      const status = await invoke<number>("lm_ping", {
-        baseUrl: urlDraft,
-      });
-      setTestStatus(status > 0 ? "ok" : "fail");
-    } catch {
-      setTestStatus("fail");
-    }
-  };
+  useEffect(() => setAzureDraft(azureEndpoint), [azureEndpoint]);
+  useEffect(() => setClaudeDraft(claudeEndpoint), [claudeEndpoint]);
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-0.5">
-        <Label>Local — LM Studio</Label>
+        <Label>Endpoint configuration</Label>
         <span className="text-[10.5px] leading-relaxed text-muted-foreground">
-          Run any GGUF model on your machine via LM Studio's HTTP server. Enable
-          the server in LM Studio → Developer tab.
+          Set the base URLs for your Azure OpenAI and Azure Claude deployments.
+          GitHub Copilot uses the GitHub Models endpoint automatically.
         </span>
       </div>
 
       <div className="flex flex-col gap-2.5 rounded-lg border border-border/60 bg-card/60 px-3 py-2.5">
-        <FieldRow label="Base URL">
-          <div className="flex flex-1 gap-1.5">
-            <Input
-              value={urlDraft}
-              onChange={(e) => setUrlDraft(e.target.value)}
-              onBlur={() => {
-                const v = urlDraft.trim();
-                if (v && v !== baseURL) void setLmstudioBaseURL(v);
-              }}
-              placeholder="http://localhost:1234/v1"
-              spellCheck={false}
-              className="h-8 flex-1 font-mono text-[11.5px]"
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void test()}
-              disabled={!urlDraft.trim()}
-              className="h-8 px-3 text-[11px]"
-            >
-              Test
-            </Button>
-          </div>
-        </FieldRow>
-
-        <FieldRow label="Model ID">
+        <FieldRow label="Azure OpenAI">
           <Input
-            value={modelDraft}
-            onChange={(e) => setModelDraft(e.target.value)}
+            value={azureDraft}
+            onChange={(e) => setAzureDraft(e.target.value)}
             onBlur={() => {
-              const v = modelDraft.trim();
-              if (v !== modelId) void setLmstudioModelId(v);
+              const v = azureDraft.trim();
+              if (v !== azureEndpoint) void setAzureOpenaiEndpoint(v);
             }}
-            placeholder="qwen2.5-coder-7b-instruct"
+            placeholder="https://myresource.openai.azure.com"
             spellCheck={false}
-            className="h-8 font-mono text-[11.5px]"
+            className="h-8 flex-1 font-mono text-[11.5px]"
           />
         </FieldRow>
 
-        <StatusLine status={testStatus} />
-
-        {!modelId.trim() ? (
-          <p className="text-[10.5px] leading-relaxed text-amber-600 dark:text-amber-400">
-            Enter the model id that's loaded in LM Studio — e.g. the one shown
-            on the server's <span className="font-mono">/v1/models</span> page.
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function OpenAICompatibleBlock({
-  compatKey,
-  onSaveKey,
-  onClearKey,
-}: {
-  compatKey: string | null;
-  onSaveKey: (v: string) => Promise<void>;
-  onClearKey: () => Promise<void>;
-}) {
-  const baseURL = usePreferencesStore((s) => s.openaiCompatibleBaseURL);
-  const modelId = usePreferencesStore((s) => s.openaiCompatibleModelId);
-  const [urlDraft, setUrlDraft] = useState(baseURL);
-  const [modelDraft, setModelDraft] = useState(modelId);
-  const [keyDraft, setKeyDraft] = useState("");
-  const [testStatus, setTestStatus] = useState<
-    "idle" | "testing" | "ok" | "fail"
-  >("idle");
-
-  useEffect(() => setUrlDraft(baseURL), [baseURL]);
-  useEffect(() => setModelDraft(modelId), [modelId]);
-
-  const test = async () => {
-    setTestStatus("testing");
-    try {
-      const status = await invoke<number>("lm_ping", {
-        baseUrl: urlDraft,
-      });
-      setTestStatus(status > 0 ? "ok" : "fail");
-    } catch {
-      setTestStatus("fail");
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-0.5">
-        <Label>OpenAI-compatible endpoint</Label>
-        <span className="text-[10.5px] leading-relaxed text-muted-foreground">
-          Any OpenAI-compatible HTTPS endpoint — vLLM, Z.AI, Fireworks, hosted
-          Ollama, etc.
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-2.5 rounded-lg border border-border/60 bg-card/60 px-3 py-2.5">
-        <FieldRow label="Base URL">
-          <div className="flex flex-1 gap-1.5">
-            <Input
-              value={urlDraft}
-              onChange={(e) => setUrlDraft(e.target.value)}
-              onBlur={() => {
-                const v = urlDraft.trim();
-                if (v !== baseURL) void setOpenaiCompatibleBaseURL(v);
-              }}
-              placeholder="https://api.example.com/v1"
-              spellCheck={false}
-              className="h-8 flex-1 font-mono text-[11.5px]"
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void test()}
-              disabled={!urlDraft.trim()}
-              className="h-8 px-3 text-[11px]"
-            >
-              Test
-            </Button>
-          </div>
-        </FieldRow>
-
-        <FieldRow label="Model ID">
+        <FieldRow label="Azure Claude">
           <Input
-            value={modelDraft}
-            onChange={(e) => setModelDraft(e.target.value)}
+            value={claudeDraft}
+            onChange={(e) => setClaudeDraft(e.target.value)}
             onBlur={() => {
-              const v = modelDraft.trim();
-              if (v !== modelId) void setOpenaiCompatibleModelId(v);
+              const v = claudeDraft.trim();
+              if (v !== claudeEndpoint) void setAzureClaudeEndpoint(v);
             }}
-            placeholder="gpt-4o, qwen3-max, glm-4.6, …"
+            placeholder="https://myresource.services.ai.azure.com/models"
             spellCheck={false}
-            className="h-8 font-mono text-[11.5px]"
+            className="h-8 flex-1 font-mono text-[11.5px]"
           />
         </FieldRow>
-
-        <FieldRow label="API key">
-          {compatKey ? (
-            <div className="flex flex-1 items-center gap-1.5">
-              <code className="flex-1 truncate rounded bg-muted/40 px-2 py-1 font-mono text-[11px] text-muted-foreground">
-                {`${compatKey.slice(0, 4)}${"•".repeat(8)}${compatKey.slice(-4)}`}
-              </code>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => void onClearKey()}
-                title="Remove"
-                className="size-7 text-muted-foreground hover:text-destructive"
-              >
-                <HugeiconsIcon
-                  icon={Cancel01Icon}
-                  size={12}
-                  strokeWidth={1.75}
-                />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-1 gap-1.5">
-              <Input
-                type="password"
-                value={keyDraft}
-                onChange={(e) => setKeyDraft(e.target.value)}
-                placeholder="Optional — leave empty for unauthenticated endpoints"
-                spellCheck={false}
-                className="h-8 flex-1 font-mono text-[11.5px]"
-              />
-              <Button
-                size="sm"
-                onClick={async () => {
-                  const v = keyDraft.trim();
-                  if (!v) return;
-                  await onSaveKey(v);
-                  setKeyDraft("");
-                }}
-                disabled={!keyDraft.trim()}
-                className="h-8 px-3 text-[11px]"
-              >
-                Save
-              </Button>
-            </div>
-          )}
-        </FieldRow>
-
-        <StatusLine status={testStatus} />
       </div>
     </div>
   );
@@ -587,32 +388,6 @@ function FieldRow({
       </span>
       <div className="flex flex-1 items-center">{children}</div>
     </div>
-  );
-}
-
-function StatusLine({
-  status,
-}: {
-  status: "idle" | "testing" | "ok" | "fail";
-}) {
-  if (status === "idle") return null;
-  if (status === "testing") {
-    return (
-      <span className="text-[10.5px] text-muted-foreground">Testing…</span>
-    );
-  }
-  if (status === "ok") {
-    return (
-      <span className="flex items-center gap-1 text-[10.5px] text-emerald-600 dark:text-emerald-400">
-        <HugeiconsIcon icon={CheckmarkCircle02Icon} size={11} strokeWidth={2} />
-        Reachable — server responded.
-      </span>
-    );
-  }
-  return (
-    <span className="text-[10.5px] text-destructive">
-      Could not reach the server.
-    </span>
   );
 }
 
