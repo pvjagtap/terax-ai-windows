@@ -156,9 +156,9 @@ html[data-chrome="borderless"] #settings-root {
  * xterm.js overrides — kept outside @layer so they win against the addon's
  * own stylesheet (which is not in any layer and would otherwise override).
  *
- * Newer xterm renders scrollbars as real <div class="scrollbar vertical|horizontal">
- * children rather than relying on native overflow scrollbars. Both code paths exist
- * across versions, so we hide both.
+ * xterm.js has two scrollbar mechanisms:
+ * 1. Its own custom overlay (.xterm .scrollbar) — hide this (chunky)
+ * 2. Native scrollbar on .xterm-viewport — let the global thin scrollbar show
  */
 .xterm .scrollbar,
 .xterm .scrollbar.vertical,
@@ -169,17 +169,6 @@ html[data-chrome="borderless"] #settings-root {
   height: 0 !important;
   pointer-events: none !important;
 }
-.xterm .xterm-viewport,
-.xterm-viewport {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-.xterm .xterm-viewport::-webkit-scrollbar,
-.xterm-viewport::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
-  display: none !important;
-}
 .xterm,
 .xterm-screen,
 .xterm:focus,
@@ -187,16 +176,29 @@ html[data-chrome="borderless"] #settings-root {
   outline: none !important;
 }
 
+/* CodeMirror: use the global thin scrollbar instead of hiding */
 .cm-editor,
 .cm-scroller {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.55 0 0 / 0.35) transparent;
 }
 .cm-editor::-webkit-scrollbar,
 .cm-scroller::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
-  display: none !important;
+  width: 6px;
+  height: 6px;
+}
+.cm-editor::-webkit-scrollbar-track,
+.cm-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cm-editor::-webkit-scrollbar-thumb,
+.cm-scroller::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0 0 / 0.3);
+  border-radius: 3px;
+}
+.cm-editor::-webkit-scrollbar-thumb:hover,
+.cm-scroller::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.55 0 0 / 0.5);
 }
 
 
@@ -222,21 +224,33 @@ html[data-chrome="borderless"] #settings-root {
   display: none !important;
 }
 
-/* Linux/Windows ship a chunky native Chromium scrollbar that breaks the
- * frosted-glass aesthetic. Hide it globally — visible scroll affordances are
- * provided per-region via shadcn <ScrollArea>. macOS native overlay scrollbar
- * stays untouched. */
+/* Linux/Windows: replace chunky native Chromium scrollbar with a thin,
+ * semi-transparent track that respects the frosted-glass aesthetic.
+ * macOS native overlay scrollbar stays untouched. */
 html[data-chrome="borderless"] {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.55 0 0 / 0.35) transparent;
 }
 html[data-chrome="borderless"] *,
 html[data-chrome="borderless"] *::before,
 html[data-chrome="borderless"] *::after {
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.55 0 0 / 0.35) transparent;
 }
 html[data-chrome="borderless"] *::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
+  width: 6px;
+  height: 6px;
+}
+html[data-chrome="borderless"] *::-webkit-scrollbar-track {
+  background: transparent;
+}
+html[data-chrome="borderless"] *::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0 0 / 0.3);
+  border-radius: 3px;
+}
+html[data-chrome="borderless"] *::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.55 0 0 / 0.5);
+}
+html[data-chrome="borderless"] *::-webkit-scrollbar-corner {
+  background: transparent;
 }
