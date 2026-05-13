@@ -51,38 +51,38 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.148 0.004 228.8);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.148 0.004 228.8);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.148 0.004 228.8);
-    --primary: oklch(0.218 0.008 223.9);
-    --primary-foreground: oklch(0.987 0.002 197.1);
-    --secondary: oklch(0.963 0.002 197.1);
-    --secondary-foreground: oklch(0.218 0.008 223.9);
-    --muted: oklch(0.963 0.002 197.1);
-    --muted-foreground: oklch(0.56 0.021 213.5);
-    --accent: oklch(0.963 0.002 197.1);
-    --accent-foreground: oklch(0.218 0.008 223.9);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.925 0.005 214.3);
-    --input: oklch(0.925 0.005 214.3);
-    --ring: oklch(0.723 0.014 214.4);
-    --chart-1: oklch(0.872 0.007 219.6);
-    --chart-2: oklch(0.56 0.021 213.5);
-    --chart-3: oklch(0.45 0.017 213.2);
-    --chart-4: oklch(0.378 0.015 216);
-    --chart-5: oklch(0.275 0.011 216.9);
+    --background: oklch(0.985 0.002 80);
+    --foreground: oklch(0.205 0.015 60);
+    --card: oklch(0.975 0.003 80);
+    --card-foreground: oklch(0.205 0.015 60);
+    --popover: oklch(0.99 0.002 80);
+    --popover-foreground: oklch(0.205 0.015 60);
+    --primary: oklch(0.365 0.06 250);
+    --primary-foreground: oklch(0.985 0.002 80);
+    --secondary: oklch(0.935 0.008 75);
+    --secondary-foreground: oklch(0.235 0.015 60);
+    --muted: oklch(0.935 0.008 75);
+    --muted-foreground: oklch(0.395 0.015 60);
+    --accent: oklch(0.925 0.012 75);
+    --accent-foreground: oklch(0.235 0.015 60);
+    --destructive: oklch(0.525 0.245 27.325);
+    --border: oklch(0.795 0.015 75);
+    --input: oklch(0.795 0.015 75);
+    --ring: oklch(0.365 0.06 250);
+    --chart-1: oklch(0.365 0.06 250);
+    --chart-2: oklch(0.50 0.15 150);
+    --chart-3: oklch(0.45 0.12 30);
+    --chart-4: oklch(0.55 0.10 300);
+    --chart-5: oklch(0.50 0.15 60);
     --radius: 0.625rem;
-    --sidebar: oklch(0.987 0.002 197.1);
-    --sidebar-foreground: oklch(0.148 0.004 228.8);
-    --sidebar-primary: oklch(0.218 0.008 223.9);
-    --sidebar-primary-foreground: oklch(0.987 0.002 197.1);
-    --sidebar-accent: oklch(0.963 0.002 197.1);
-    --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
-    --sidebar-border: oklch(0.925 0.005 214.3);
-    --sidebar-ring: oklch(0.723 0.014 214.4);
+    --sidebar: oklch(0.975 0.003 80);
+    --sidebar-foreground: oklch(0.205 0.015 60);
+    --sidebar-primary: oklch(0.365 0.06 250);
+    --sidebar-primary-foreground: oklch(0.985 0.002 80);
+    --sidebar-accent: oklch(0.925 0.012 75);
+    --sidebar-accent-foreground: oklch(0.235 0.015 60);
+    --sidebar-border: oklch(0.795 0.015 75);
+    --sidebar-ring: oklch(0.365 0.06 250);
 }
 
 .dark {
@@ -123,6 +123,10 @@
   * {
     @apply border-border outline-ring/50;
     }
+  ::selection {
+    background: rgba(250, 204, 21, 0.35);
+    color: inherit;
+    }
   body {
     @apply bg-background text-foreground;
     margin: 0;
@@ -150,24 +154,43 @@ html[data-chrome="borderless"] #settings-root {
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--background);
+  scrollbar-width: none;
+}
+html[data-chrome="borderless"] #settings-root::-webkit-scrollbar,
+html[data-chrome="borderless"] #root::-webkit-scrollbar {
+  display: none;
 }
 
 /*
  * xterm.js overrides — kept outside @layer so they win against the addon's
  * own stylesheet (which is not in any layer and would otherwise override).
  *
- * xterm.js has two scrollbar mechanisms:
- * 1. Its own custom overlay (.xterm .scrollbar) — hide this (chunky)
- * 2. Native scrollbar on .xterm-viewport — let the global thin scrollbar show
+ * xterm.js v6 DOM: .xterm-viewport (native, behind canvas — always hidden)
+ * + .xterm-scrollable-element > .scrollbar (VS Code-style overlay — visible).
+ * We hide the viewport scrollbar and style the overlay as a thin 6px track.
  */
-.xterm .scrollbar,
-.xterm .scrollbar.vertical,
-.xterm .scrollbar.horizontal {
-  display: none !important;
-  visibility: hidden !important;
-  width: 0 !important;
-  height: 0 !important;
-  pointer-events: none !important;
+
+/* Hide native scrollbar — it sits behind the canvas and can't be seen */
+.xterm .xterm-viewport {
+  scrollbar-width: none;
+}
+.xterm .xterm-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+/* Style the custom overlay scrollbar: 6px thin, semi-transparent */
+.xterm .xterm-scrollable-element > .scrollbar {
+  width: 6px !important;
+  right: 0 !important;
+}
+.xterm .xterm-scrollable-element > .scrollbar > .slider {
+  background: oklch(0.55 0 0 / 0.3) !important;
+  border-radius: 3px !important;
+  width: 6px !important;
+  left: 0 !important;
+}
+.xterm .xterm-scrollable-element > .scrollbar > .slider:hover {
+  background: oklch(0.55 0 0 / 0.5) !important;
 }
 .xterm,
 .xterm-screen,

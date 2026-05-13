@@ -19,10 +19,10 @@ import {
 } from "react";
 
 const TERM_DECORATIONS = {
-  matchBackground: "#515c6a",
-  activeMatchBackground: "#d18616",
-  matchOverviewRuler: "#d18616",
-  activeMatchColorOverviewRuler: "#d18616",
+  matchBackground: "rgba(250, 204, 21, 0.25)",
+  activeMatchBackground: "rgba(250, 204, 21, 0.50)",
+  matchOverviewRuler: "#facc15",
+  activeMatchColorOverviewRuler: "#facc15",
 };
 
 export type SearchTarget =
@@ -153,7 +153,7 @@ export const SearchInline = forwardRef<SearchInlineHandle, Props>(
                 ref={setInputRef}
                 value={q}
                 placeholder={placeholder}
-                className="h-7 w-full bg-muted/80 pr-7 pl-7 text-[13px]! placeholder:text-muted-foreground/70 focus-visible:ring-0"
+                className="h-7 w-full bg-muted/80 pr-7 pl-7 text-[13px]! placeholder:text-muted-foreground focus-visible:ring-0"
                 onChange={(e) => {
                   const next = e.target.value;
                   setQ(next);

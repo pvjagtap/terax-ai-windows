@@ -106,6 +106,44 @@ function ensureSession(leafId: number, initialCwd?: string): Session {
   sessions.set(leafId, session);
 
   term.attachCustomKeyEventHandler((event) => {
+    if (event.type !== "keydown") return true;
+
+    // Ctrl+Shift+C or Ctrl+C with active selection → copy
+    if (
+      event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      (event.key === "C" || (event.key === "c" && event.shiftKey) ||
+        (event.key === "c" && term.hasSelection()))
+    ) {
+      const sel = term.getSelection();
+      if (sel) {
+        navigator.clipboard.writeText(sel).catch(() => {});
+        event.preventDefault();
+        return false;
+      }
+      // No selection + Ctrl+C (no shift) → send SIGINT as normal
+      if (!event.shiftKey) return true;
+      return false;
+    }
+
+    // Ctrl+Shift+V or Ctrl+V → paste from clipboard
+    if (
+      event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      (event.key === "V" || event.key === "v")
+    ) {
+      navigator.clipboard
+        .readText()
+        .then((text) => {
+          if (text && session.pty) session.pty.write(text);
+        })
+        .catch(() => {});
+      event.preventDefault();
+      return false;
+    }
+
     if (!isCtrlBackspace(event)) return true;
     const pty = session.pty;
     if (!pty) return true;

@@ -93,7 +93,7 @@ export const PreviewPane = forwardRef<PreviewPaneHandle, Props>(
 function EmptyState() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="flex size-12 items-center justify-center rounded-2xl border border-border/60 bg-card text-muted-foreground">
+      <div className="flex size-12 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground">
         <HugeiconsIcon icon={Globe02Icon} size={20} strokeWidth={1.5} />
       </div>
       <div className="space-y-1.5">

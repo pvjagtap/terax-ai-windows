@@ -4989,7 +4989,7 @@ dependencies = [
 
 [[package]]
 name = "terax"
-version = "0.6.4"
+version = "0.6.8"
 dependencies = [
  "dirs 5.0.1",
  "globset",

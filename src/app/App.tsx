@@ -94,9 +94,14 @@ export default function App() {
   const [activeEditorHandle, setActiveEditorHandle] =
     useState<EditorPaneHandle | null>(null);
   const sidebarRef = useRef<PanelImperativeHandle | null>(null);
-  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
+  // "hidden" = no sidebar, "collapsed" = icon-only (default), "expanded" = icons + names
+  const [leftSidebarState, setLeftSidebarState] = useState<"hidden" | "collapsed" | "expanded">("collapsed");
   const toggleLeftSidebar = useCallback(() => {
-    setLeftSidebarOpen((v) => !v);
+    setLeftSidebarState((v) => {
+      if (v === "hidden") return "collapsed";
+      if (v === "collapsed") return "expanded";
+      return "hidden";
+    });
   }, []);
   const toggleRightSidebar = useCallback(() => {
     const p = sidebarRef.current;
@@ -465,10 +470,11 @@ export default function App() {
           />
 
           <main className="flex min-h-0 flex-1">
-            {leftSidebarOpen && (
+            {leftSidebarState !== "hidden" && (
               <VerticalTabBar
                 tabs={tabs}
                 activeId={activeId}
+                expanded={leftSidebarState === "expanded"}
                 onSelect={setActiveId}
                 onNew={openNewTab}
                 onNewPrivate={openNewPrivateTab}

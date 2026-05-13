@@ -170,7 +170,7 @@ export const PreviewAddressBar = forwardRef<PreviewAddressBarHandle, Props>(
             placeholder="http://localhost:3000"
             spellCheck={false}
             autoComplete="off"
-            className="h-7 w-full bg-muted/60 px-2 text-xs placeholder:text-muted-foreground/70 focus-visible:ring-0"
+            className="h-7 w-full bg-muted/60 px-2 text-xs placeholder:text-muted-foreground focus-visible:ring-0"
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {

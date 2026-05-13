@@ -10,7 +10,7 @@ import type { ITheme } from "@xterm/xterm";
  */
 
 /** Curated ANSI 16 palette, tuned for shadcn's dark surface. */
-const ansi = {
+const darkAnsi = {
   black: "#18181b",
   red: "#ef4444",
   green: "#22c55e",
@@ -30,20 +30,58 @@ const ansi = {
   brightWhite: "#fafafa",
 } as const;
 
+/** Light-mode ANSI palette — darker, saturated tones for warm light bg.
+ *  Key: white/brightWhite are flipped to dark tones (like VS Code Light+)
+ *  so that shell prompts using ANSI white stay readable on a light surface. */
+const lightAnsi = {
+  black: "#1c1917",
+  red: "#b91c1c",
+  green: "#15803d",
+  yellow: "#a16207",
+  blue: "#1d4ed8",
+  magenta: "#7c3aed",
+  cyan: "#0e7490",
+  white: "#57534e",
+
+  brightBlack: "#78716c",
+  brightRed: "#dc2626",
+  brightGreen: "#16a34a",
+  brightYellow: "#ca8a04",
+  brightBlue: "#2563eb",
+  brightMagenta: "#8b5cf6",
+  brightCyan: "#0891b2",
+  brightWhite: "#292524",
+} as const;
+
 /** Semantic palette reused by the code editor. Kept in one place so the
  *  terminal's ANSI colors and syntax highlighting stay visually coherent. */
 export const syntaxPalette = {
-  comment: ansi.brightBlack,
-  keyword: ansi.blue,
-  string: ansi.green,
-  number: ansi.yellow,
-  constant: ansi.magenta,
-  fn: ansi.cyan,
-  type: ansi.brightCyan,
-  tag: ansi.red,
+  comment: darkAnsi.brightBlack,
+  keyword: darkAnsi.blue,
+  string: darkAnsi.green,
+  number: darkAnsi.yellow,
+  constant: darkAnsi.magenta,
+  fn: darkAnsi.cyan,
+  type: darkAnsi.brightCyan,
+  tag: darkAnsi.red,
   punctuation: "#a1a1aa",
-  invalid: ansi.red,
-  link: ansi.blue,
+  invalid: darkAnsi.red,
+  link: darkAnsi.blue,
+} as const;
+
+/** Light-mode syntax palette for the code editor. */
+export const lightSyntaxPalette = {
+  comment: lightAnsi.brightBlack,
+  keyword: lightAnsi.blue,
+  string: lightAnsi.green,
+  number: lightAnsi.yellow,
+  constant: lightAnsi.magenta,
+  fn: lightAnsi.cyan,
+  type: lightAnsi.cyan,
+  tag: lightAnsi.red,
+  punctuation: "#57534e",
+  invalid: lightAnsi.red,
+  link: lightAnsi.blue,
 } as const;
 
 /**
@@ -53,12 +91,15 @@ export const syntaxPalette = {
  */
 export function buildTerminalTheme(): ITheme {
   const t = readAppTokens();
+  const isDark = document.documentElement.classList.contains("dark");
+  const ansi = isDark ? darkAnsi : lightAnsi;
   return {
     background: t.background,
     foreground: t.foreground,
     cursor: t.foreground,
     cursorAccent: t.background,
-    selectionBackground: t.accent,
+    selectionBackground: isDark ? "rgba(250, 204, 21, 0.30)" : "rgba(202, 138, 4, 0.25)",
+    selectionForeground: undefined,
     ...ansi,
   };
 }
