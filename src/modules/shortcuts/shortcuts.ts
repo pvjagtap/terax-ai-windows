@@ -155,7 +155,7 @@ export const SHORTCUTS: Shortcut[] = [
     id: "view.zoomIn",
     label: "Zoom in",
     group: "View",
-    defaultBindings: [{ [MOD_PROP]: true, key: "=" }],
+    defaultBindings: [{ [MOD_PROP]: true, shift: true, key: "+" }],
   },
   {
     id: "view.zoomOut",
