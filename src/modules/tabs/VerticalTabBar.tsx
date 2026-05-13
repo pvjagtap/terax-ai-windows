@@ -84,7 +84,7 @@ export function VerticalTabBar({
               className={cn(
                 "group relative flex shrink-0 items-center rounded-md text-muted-foreground transition-colors hover:text-foreground/80",
                 isActive && "bg-accent text-foreground",
-                expanded ? "h-7 gap-2 px-2" : "size-7 justify-center",
+                expanded ? "h-7 w-full gap-2 px-2 pr-5" : "size-7 justify-center",
               )}
             >
               <TabIcon tab={t} />
@@ -108,7 +108,7 @@ export function VerticalTabBar({
                   className={cn(
                     "absolute flex size-3.5 items-center justify-center rounded-full bg-card shadow-sm transition-opacity group-hover:opacity-100",
                     expanded
-                      ? "top-1/2 right-0.5 -translate-y-1/2 opacity-0"
+                      ? "top-1/2 right-1 -translate-y-1/2 opacity-0"
                       : "-top-0.5 -right-0.5 opacity-0",
                   )}
                 >
