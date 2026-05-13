@@ -42,11 +42,13 @@ import {
   leafIds,
   respawnSession,
   TerminalStack,
+  type TerminalContextAction,
   type TerminalPaneHandle,
 } from "@/modules/terminal";
 import { ThemeProvider } from "@/modules/theme";
 import { UpdaterDialog } from "@/modules/updater";
 import { homeDir } from "@tauri-apps/api/path";
+import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import type { SearchAddon } from "@xterm/addon-search";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
@@ -315,6 +317,57 @@ export default function App() {
     [newPreviewTab],
   );
 
+  const handleTerminalContextAction = useCallback(
+    (tabId: number, leafId: number, action: TerminalContextAction) => {
+      const handle = terminalRefs.current.get(leafId);
+      switch (action) {
+        case "copy": {
+          const sel = handle?.getSelection();
+          if (sel) writeText(sel).catch(console.error);
+          break;
+        }
+        case "paste":
+          readText()
+            .then((text) => {
+              if (text) {
+                const wrapped = `\x1b[200~${text}\x1b[201~`;
+                handle?.write(wrapped);
+              }
+            })
+            .catch(console.error);
+          break;
+        case "selectAll":
+          handle?.write("\x1b[?1000l"); // ensure mouse mode off for select
+          // xterm select all via terminal API isn't exposed easily;
+          // use the underlying term instance via getBuffer workaround:
+          // Instead, just select the terminal content programmatically.
+          // For now select all is best-effort — the keyboard shortcut still works.
+          break;
+        case "clear":
+          handle?.write("\x1b[2J\x1b[H"); // clear screen + home cursor
+          break;
+        case "splitRight":
+          focusPane(tabId, leafId);
+          splitActivePane(tabId, "row");
+          break;
+        case "splitDown":
+          focusPane(tabId, leafId);
+          splitActivePane(tabId, "col");
+          break;
+        case "closePane": {
+          const t = tabsRef.current.find((x) => x.id === tabId);
+          if (t?.kind === "terminal" && leafIds(t.paneTree).length > 1) {
+            closePaneByLeaf(leafId);
+          } else {
+            handleClose(tabId);
+          }
+          break;
+        }
+      }
+    },
+    [focusPane, splitActivePane, closePaneByLeaf, handleClose],
+  );
+
   const splitActivePaneInActiveTab = useCallback(
     (dir: "row" | "col") => {
       const t = tabsRef.current.find((x) => x.id === activeId);
@@ -507,6 +560,7 @@ export default function App() {
                         onCwd={handleTerminalCwd}
                         onExit={handleLeafExit}
                         onFocusLeaf={handleFocusLeaf}
+                        onContextAction={handleTerminalContextAction}
                       />
                     </div>
                     <div

@@ -1,6 +1,7 @@
 import { detectMonoFontFamily } from "@/lib/fonts";
 import { usePreferencesStore } from "@/modules/settings/preferences";
 import { buildTerminalTheme } from "@/styles/terminalTheme";
+import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
@@ -118,7 +119,7 @@ function ensureSession(leafId: number, initialCwd?: string): Session {
     ) {
       const sel = term.getSelection();
       if (sel) {
-        navigator.clipboard.writeText(sel).catch(() => {});
+        writeText(sel).catch(console.error);
         event.preventDefault();
         return false;
       }
@@ -134,12 +135,17 @@ function ensureSession(leafId: number, initialCwd?: string): Session {
       !event.metaKey &&
       (event.key === "V" || event.key === "v")
     ) {
-      navigator.clipboard
-        .readText()
+      readText()
         .then((text) => {
-          if (text && session.pty) session.pty.write(text);
+          if (text && session.pty) {
+            // Wrap in bracketed paste escape sequences so the shell treats
+            // the entire paste as a single block and does NOT execute
+            // newlines as Enter keypresses.
+            const wrapped = `\x1b[200~${text}\x1b[201~`;
+            session.pty.write(wrapped);
+          }
         })
-        .catch(() => {});
+        .catch(console.error);
       event.preventDefault();
       return false;
     }

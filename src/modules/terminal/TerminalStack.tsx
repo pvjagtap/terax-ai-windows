@@ -1,7 +1,7 @@
 import type { Tab } from "@/modules/tabs";
 import type { SearchAddon } from "@xterm/addon-search";
 import { useEffect, useRef } from "react";
-import { PaneTreeView } from "./PaneTreeView";
+import { PaneTreeView, type TerminalContextAction } from "./PaneTreeView";
 import type { TerminalPaneHandle } from "./TerminalPane";
 import { leafIds } from "./lib/panes";
 
@@ -14,6 +14,7 @@ type Props = {
   onCwd: (leafId: number, cwd: string) => void;
   onExit: (leafId: number, code: number) => void;
   onFocusLeaf: (tabId: number, leafId: number) => void;
+  onContextAction?: (tabId: number, leafId: number, action: TerminalContextAction) => void;
 };
 
 type Bundle = {
@@ -31,6 +32,7 @@ export function TerminalStack({
   onCwd,
   onExit,
   onFocusLeaf,
+  onContextAction,
 }: Props) {
   const terminals = tabs.filter((t) => t.kind === "terminal");
 
@@ -86,6 +88,7 @@ export function TerminalStack({
               activeLeafId={t.activeLeafId}
               onFocusLeaf={(leafId) => onFocusLeaf(t.id, leafId)}
               getBundle={getBundle}
+              onContextAction={(leafId, action) => onContextAction?.(t.id, leafId, action)}
             />
           </div>
         );
