@@ -110,6 +110,7 @@ export async function buildLanguageModel(
         name: "github-copilot",
         baseURL: GITHUB_MODELS_BASE_URL,
         apiKey: key,
+        headers: { "X-GitHub-Api-Version": "2026-03-10" },
         fetch: proxyFetch,
       })(resolvedModelId);
       break;

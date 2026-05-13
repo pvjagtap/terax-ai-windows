@@ -25,10 +25,10 @@ export const PROVIDERS: readonly ProviderInfo[] = [
   },
   {
     id: "github-copilot",
-    label: "GitHub Copilot",
+    label: "GitHub Copilot (Enterprise)",
     keyringAccount: "github-copilot-token",
     keyPrefix: null,
-    consoleUrl: "https://github.com/settings/tokens",
+    consoleUrl: "https://github.com/settings/personal-access-tokens/new",
   },
   {
     id: "azure-claude",
@@ -125,51 +125,78 @@ export const MODELS = [
     tags: ["reasoning", "tools", "coding"],
   },
 
-  // ── GitHub Copilot (GitHub Models) ────────────────────────────────────────
+  // ── GitHub Copilot (Enterprise) ─────────────────────────────────────────
   {
-    id: "github/gpt-4o",
+    id: "openai/gpt-4.1",
     provider: "github-copilot",
-    label: "GPT-4o",
-    hint: "Copilot",
-    description: "GPT-4o via GitHub Models.",
-    capabilities: { intelligence: 5, speed: 3, cost: 3 },
+    label: "GPT-4.1",
+    hint: "Flagship",
+    description: "OpenAI GPT-4.1 via GitHub Copilot Enterprise.",
+    capabilities: { intelligence: 5, speed: 3, cost: 2 },
     tags: ["vision", "reasoning", "tools", "coding"],
   },
   {
-    id: "github/gpt-4o-mini",
+    id: "openai/gpt-5-mini",
     provider: "github-copilot",
-    label: "GPT-4o mini",
-    hint: "Copilot Fast",
-    description: "Fast GPT-4o mini via GitHub Models.",
+    label: "GPT-5 mini",
+    hint: "Fast",
+    description: "Fast, cost-effective GPT-5 mini via Copilot Enterprise.",
     capabilities: { intelligence: 4, speed: 5, cost: 4 },
-    tags: ["vision", "tools"],
+    tags: ["vision", "tools", "coding"],
   },
   {
-    id: "github/o1-preview",
+    id: "openai/gpt-5.4",
     provider: "github-copilot",
-    label: "o1-preview",
-    hint: "Copilot Reasoning",
-    description: "o1-preview via GitHub Models.",
-    capabilities: { intelligence: 5, speed: 2, cost: 2 },
-    tags: ["reasoning", "tools", "coding"],
+    label: "GPT-5.4",
+    hint: "Latest",
+    description: "Latest flagship GPT-5.4 via Copilot Enterprise.",
+    capabilities: { intelligence: 5, speed: 3, cost: 1 },
+    tags: ["vision", "reasoning", "tools", "coding"],
   },
   {
-    id: "github/o1-mini",
+    id: "openai/gpt-5.4-mini",
     provider: "github-copilot",
-    label: "o1-mini",
-    hint: "Copilot Fast Reasoning",
-    description: "o1-mini via GitHub Models.",
-    capabilities: { intelligence: 4, speed: 4, cost: 3 },
-    tags: ["reasoning", "tools", "coding"],
+    label: "GPT-5.4 mini",
+    hint: "Latest Fast",
+    description: "Latest fast GPT-5.4 mini via Copilot Enterprise.",
+    capabilities: { intelligence: 4, speed: 5, cost: 3 },
+    tags: ["vision", "tools", "coding"],
   },
   {
-    id: "github/claude-3.5-sonnet",
+    id: "anthropic/claude-sonnet-4.5",
     provider: "github-copilot",
-    label: "Claude 3.5 Sonnet",
-    hint: "Copilot Claude",
-    description: "Anthropic Claude 3.5 Sonnet via GitHub Models.",
+    label: "Claude Sonnet 4.5",
+    hint: "Balanced",
+    description: "Anthropic Claude Sonnet 4.5 via Copilot Enterprise.",
     capabilities: { intelligence: 5, speed: 4, cost: 3 },
     tags: ["vision", "tools", "coding"],
+  },
+  {
+    id: "anthropic/claude-sonnet-4.6",
+    provider: "github-copilot",
+    label: "Claude Sonnet 4.6",
+    hint: "Latest Sonnet",
+    description: "Latest Claude Sonnet 4.6 via Copilot Enterprise.",
+    capabilities: { intelligence: 5, speed: 4, cost: 3 },
+    tags: ["vision", "tools", "coding"],
+  },
+  {
+    id: "anthropic/claude-opus-4.6",
+    provider: "github-copilot",
+    label: "Claude Opus 4.6",
+    hint: "Best Claude",
+    description: "Claude Opus 4.6 — most capable Claude via Copilot Enterprise.",
+    capabilities: { intelligence: 5, speed: 2, cost: 1 },
+    tags: ["vision", "reasoning", "tools", "coding"],
+  },
+  {
+    id: "google/gemini-2.5-pro",
+    provider: "github-copilot",
+    label: "Gemini 2.5 Pro",
+    hint: "Google",
+    description: "Google Gemini 2.5 Pro via Copilot Enterprise.",
+    capabilities: { intelligence: 5, speed: 3, cost: 2 },
+    tags: ["vision", "reasoning", "tools", "coding"],
   },
 
   // ── Azure Claude (Azure AI Foundry) ───────────────────────────────────────
@@ -220,11 +247,14 @@ export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   "o1-preview": 128_000,
   "o1-mini": 128_000,
   "o3-mini": 200_000,
-  "github/gpt-4o": 128_000,
-  "github/gpt-4o-mini": 128_000,
-  "github/o1-preview": 128_000,
-  "github/o1-mini": 128_000,
-  "github/claude-3.5-sonnet": 200_000,
+  "openai/gpt-4.1": 1_048_576,
+  "openai/gpt-5-mini": 1_048_576,
+  "openai/gpt-5.4": 1_048_576,
+  "openai/gpt-5.4-mini": 1_048_576,
+  "anthropic/claude-sonnet-4.5": 200_000,
+  "anthropic/claude-sonnet-4.6": 200_000,
+  "anthropic/claude-opus-4.6": 200_000,
+  "google/gemini-2.5-pro": 1_000_000,
   "claude-3.5-sonnet": 200_000,
   "claude-3-opus": 200_000,
   "claude-3-haiku": 200_000,
@@ -242,12 +272,23 @@ export type ModelPricing = {
 };
 
 export const MODEL_PRICING: Record<string, ModelPricing> = {
+  // Azure OpenAI (pay-per-token via Azure subscription)
   "gpt-4o": { input: 2.5, output: 10, cacheRead: 1.25 },
   "gpt-4o-mini": { input: 0.15, output: 0.6, cacheRead: 0.075 },
   "gpt-4-turbo": { input: 10, output: 30 },
   "o1-preview": { input: 15, output: 60 },
   "o1-mini": { input: 3, output: 12 },
   "o3-mini": { input: 1.1, output: 4.4 },
+  // GitHub Copilot Enterprise (premium-request based, costs are approximate)
+  "openai/gpt-4.1": { input: 2, output: 8, cacheRead: 0.5 },
+  "openai/gpt-5-mini": { input: 0.3, output: 1.2, cacheRead: 0.075 },
+  "openai/gpt-5.4": { input: 2.5, output: 10, cacheRead: 0.6 },
+  "openai/gpt-5.4-mini": { input: 0.3, output: 1.2, cacheRead: 0.075 },
+  "anthropic/claude-sonnet-4.5": { input: 3, output: 15, cacheRead: 0.3 },
+  "anthropic/claude-sonnet-4.6": { input: 3, output: 15, cacheRead: 0.3 },
+  "anthropic/claude-opus-4.6": { input: 15, output: 75, cacheRead: 1.5 },
+  "google/gemini-2.5-pro": { input: 1.25, output: 10 },
+  // Azure Claude (pay-per-token via Azure subscription)
   "claude-3.5-sonnet": { input: 3, output: 15, cacheRead: 0.3 },
   "claude-3-opus": { input: 15, output: 75, cacheRead: 1.5 },
   "claude-3-haiku": { input: 0.25, output: 1.25, cacheRead: 0.03 },
@@ -284,7 +325,7 @@ export type AutocompleteProviderId = ProviderId;
 /** Sensible default model id per provider for inline autocomplete. */
 export const DEFAULT_AUTOCOMPLETE_MODEL: Partial<Record<ProviderId, string>> = {
   "azure-openai": "gpt-4o-mini",
-  "github-copilot": "github/gpt-4o-mini",
+  "github-copilot": "openai/gpt-5-mini",
   "azure-claude": "claude-3-haiku",
 };
 
@@ -295,7 +336,7 @@ export function getAutocompleteEligibleModels(): readonly ModelInfo[] {
 
 export const AZURE_OPENAI_DEFAULT_ENDPOINT = "";
 export const AZURE_CLAUDE_DEFAULT_ENDPOINT = "";
-export const GITHUB_MODELS_BASE_URL = "https://models.inference.ai.azure.com";
+export const GITHUB_MODELS_BASE_URL = "https://models.github.ai/inference";
 export const MAX_AGENT_STEPS = 24;
 export const TERMINAL_BUFFER_LINES = 300;
 
