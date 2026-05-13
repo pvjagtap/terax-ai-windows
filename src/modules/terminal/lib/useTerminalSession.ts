@@ -58,11 +58,12 @@ function ensureSession(leafId: number, initialCwd?: string): Session {
   const prefs = usePreferencesStore.getState();
   const webglEnabled = prefs.terminalWebglEnabled;
   const fontSize = prefs.terminalFontSize;
+  const hasBgImage = !!prefs.backgroundImage;
 
   const term = new Terminal({
     fontFamily: detectMonoFontFamily(),
     fontSize,
-    theme: buildTerminalTheme(),
+    theme: buildTerminalTheme(hasBgImage ? 0.85 : 1),
     cursorBlink: true,
     cursorStyle: "bar",
     cursorInactiveStyle: "outline",
@@ -71,6 +72,7 @@ function ensureSession(leafId: number, initialCwd?: string): Session {
     // mind if/when we add a "scrollback" preference.
     scrollback: 5_000,
     allowProposedApi: true,
+    allowTransparency: hasBgImage,
   });
 
   const fitAddon = new FitAddon();
@@ -108,6 +110,22 @@ function ensureSession(leafId: number, initialCwd?: string): Session {
 
   term.attachCustomKeyEventHandler((event) => {
     if (event.type !== "keydown") return true;
+
+    // Shift+Enter / Ctrl+Enter / Alt+Enter → insert newline without submit.
+    // Uses bracketed-paste escapes so CLI tools (Pi, Claude Code, etc.)
+    // treat the newline as pasted text rather than a "run" command.
+    if (
+      event.key === "Enter" &&
+      (event.shiftKey || event.ctrlKey || event.altKey) &&
+      !event.metaKey
+    ) {
+      const pty = session.pty;
+      if (pty) {
+        event.preventDefault();
+        pty.write("\x1b[200~\n\x1b[201~");
+        return false;
+      }
+    }
 
     // Ctrl+Shift+C or Ctrl+C with active selection → copy
     if (
@@ -262,7 +280,7 @@ function attachSession(
   s.lastW = container.clientWidth;
   s.lastH = container.clientHeight;
 
-  if (firstAttach && !s.webglAddon && s.webglEnabled) {
+  if (firstAttach && !s.webglAddon && s.webglEnabled && !s.term.options.allowTransparency) {
     try {
       const webgl = new WebglAddon();
       webgl.onContextLoss(() => {
@@ -288,6 +306,10 @@ function attachSession(
           return;
         }
         s.pty = pty;
+        // Re-fit after PTY opens — layout may have settled since attach
+        s.lastW = 0;
+        s.lastH = 0;
+        try { s.fitAddon.fit(); } catch { /* */ }
         if (s.term.cols !== s.lastSentCols || s.term.rows !== s.lastSentRows) {
           s.lastSentCols = s.term.cols;
           s.lastSentRows = s.term.rows;
@@ -460,6 +482,7 @@ export function useTerminalSession({
 
   useEffect(() => {
     let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
     const s = ensureSession(leafId, initialCwd);
     s.ready.then(() => {
       if (cancelled || !container.current) return;
@@ -469,9 +492,24 @@ export function useTerminalSession({
         onCwd: (c) => cbRef.current.onCwd?.(c),
       });
       if (visible && focused) s.term.focus();
+
+      // Schedule extra refits to catch late layout settlement.
+      // The initial fit() in attachSession may fire before CSS flex
+      // calculations finish, leaving the terminal at wrong dimensions.
+      const refit = () => {
+        if (cancelled || s.disposed) return;
+        s.lastW = 0;
+        s.lastH = 0;
+        try { s.fitAddon.fit(); } catch { /* not attached */ }
+      };
+      // Double-rAF + 100ms + 300ms covers animation/layout timings
+      requestAnimationFrame(() => requestAnimationFrame(() => { if (!cancelled) refit(); }));
+      timers.push(setTimeout(refit, 100));
+      timers.push(setTimeout(refit, 300));
     });
     return () => {
       cancelled = true;
+      timers.forEach(clearTimeout);
       detachSession(leafId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -492,7 +530,8 @@ export function useTerminalSession({
     if (!s) return;
     s.webglEnabled = webglPref;
     if (!s.term.element) return;
-    if (webglPref && !s.webglAddon) {
+    // Don't enable WebGL when transparency is active (bg image)
+    if (webglPref && !s.webglAddon && !s.term.options.allowTransparency) {
       try {
         const webgl = new WebglAddon();
         webgl.onContextLoss(() => {
@@ -509,6 +548,37 @@ export function useTerminalSession({
       s.webglAddon = null;
     }
   }, [leafId, webglPref]);
+
+  // React to background image toggle — update transparency and theme.
+  // WebGL renderer doesn't support allowTransparency, so disable it when
+  // a background image is active.
+  const bgImage = usePreferencesStore((p) => p.backgroundImage);
+  useEffect(() => {
+    const s = sessions.get(leafId);
+    if (!s) return;
+    const hasBg = !!bgImage;
+    s.term.options.allowTransparency = hasBg;
+    s.term.options.theme = buildTerminalTheme(hasBg ? 0.85 : 1);
+    // Tear down WebGL when transparency is needed
+    if (hasBg && s.webglAddon) {
+      s.webglAddon.dispose();
+      s.webglAddon = null;
+    }
+    // Re-enable WebGL when transparency is no longer needed
+    if (!hasBg && s.webglEnabled && !s.webglAddon && s.term.element) {
+      try {
+        const webgl = new WebglAddon();
+        webgl.onContextLoss(() => {
+          webgl.dispose();
+          if (s.webglAddon === webgl) s.webglAddon = null;
+        });
+        s.term.loadAddon(webgl);
+        s.webglAddon = webgl;
+      } catch {
+        // WebGL unavailable — stay on canvas renderer
+      }
+    }
+  }, [leafId, bgImage]);
 
   useLayoutEffect(() => {
     if (!visible) return;
@@ -552,7 +622,8 @@ export function useTerminalSession({
   const applyTheme = useCallback(() => {
     const s = sessions.get(leafId);
     if (!s) return;
-    s.term.options.theme = buildTerminalTheme();
+    const hasBg = !!usePreferencesStore.getState().backgroundImage;
+    s.term.options.theme = buildTerminalTheme(hasBg ? 0.85 : 1);
   }, [leafId]);
 
   return { write, focus, getBuffer, getSelection, applyTheme };

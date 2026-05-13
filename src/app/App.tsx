@@ -139,6 +139,7 @@ export default function App() {
 
   // Hydrate the cross-window preference store.
   const initPrefs = usePreferencesStore((s) => s.init);
+  const backgroundImage = usePreferencesStore((s) => s.backgroundImage);
   useEffect(() => {
     void initPrefs();
   }, [initPrefs]);
@@ -555,6 +556,23 @@ export default function App() {
     <ThemeProvider>
       <TooltipProvider>
         <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
+          {backgroundImage?.dataUrl && (
+            <div
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{
+                backgroundImage: `url(${backgroundImage.dataUrl})`,
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+                backgroundSize:
+                  backgroundImage.mode === "cover"
+                    ? "cover"
+                    : backgroundImage.mode === "contain"
+                      ? "contain"
+                      : `${backgroundImage.size}%`,
+                opacity: backgroundImage.opacity / 100,
+              }}
+            />
+          )}
           <Header
             onToggleLeftSidebar={toggleLeftSidebar}
             onToggleRightSidebar={toggleRightSidebar}

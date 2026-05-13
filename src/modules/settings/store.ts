@@ -4,6 +4,21 @@ import type { KeyBinding, ShortcutId } from "@/modules/shortcuts/shortcuts";
 
 export type ThemePref = "system" | "light" | "dark";
 
+export type BackgroundImageMode = "cover" | "contain" | "center";
+
+export type BackgroundImageConfig = {
+  /** Base64 data-URL of the image (data:image/...) */
+  dataUrl: string;
+  /** Original filename for display */
+  fileName: string;
+  /** Display mode */
+  mode: BackgroundImageMode;
+  /** Opacity 0–100 */
+  opacity: number;
+  /** Size percentage (1–100), used when mode is "center" */
+  size: number;
+};
+
 export const EDITOR_THEMES = [
   "atomone",
   "aura",
@@ -40,6 +55,7 @@ export type Preferences = {
   terminalWebglEnabled: boolean;
   terminalFontSize: number;
   shortcuts: Record<ShortcutId, KeyBinding[]>;
+  backgroundImage: BackgroundImageConfig | null;
 };
 
 const STORE_PATH = "terax-settings.json";
@@ -53,6 +69,7 @@ const LEGACY_KEY_SHOW_HIDDEN_DIRS = "showHiddenDirectories";
 const KEY_TERMINAL_WEBGL_ENABLED = "terminalWebglEnabled";
 const KEY_TERMINAL_FONT_SIZE = "terminalFontSize";
 const KEY_SHORTCUTS = "shortcuts";
+const KEY_BACKGROUND_IMAGE = "backgroundImage";
 
 export const TERMINAL_FONT_SIZE_DEFAULT = 14;
 export const TERMINAL_FONT_SIZE_MIN = 8;
@@ -72,6 +89,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   terminalWebglEnabled: true,
   terminalFontSize: TERMINAL_FONT_SIZE_DEFAULT,
   shortcuts: {} as Record<ShortcutId, KeyBinding[]>,
+  backgroundImage: null,
 };
 
 const store = new LazyStore(STORE_PATH, { defaults: {}, autoSave: 200 });
@@ -116,6 +134,9 @@ export async function loadPreferences(): Promise<Preferences> {
     shortcuts:
       get<Record<ShortcutId, KeyBinding[]>>(KEY_SHORTCUTS) ??
       DEFAULT_PREFERENCES.shortcuts,
+    backgroundImage:
+      get<BackgroundImageConfig>(KEY_BACKGROUND_IMAGE) ??
+      DEFAULT_PREFERENCES.backgroundImage,
   };
 }
 
@@ -169,6 +190,12 @@ export async function resetShortcuts(): Promise<void> {
   await store.save();
 }
 
+export async function setBackgroundImage(
+  value: BackgroundImageConfig | null,
+): Promise<void> {
+  await writePref(KEY_BACKGROUND_IMAGE, value);
+}
+
 export type PrefKey = keyof Preferences;
 
 /** Subscribe to changes from any window (settings → main). */
@@ -185,6 +212,7 @@ export async function onPreferencesChange(
     [KEY_TERMINAL_WEBGL_ENABLED]: "terminalWebglEnabled",
     [KEY_TERMINAL_FONT_SIZE]: "terminalFontSize",
     [KEY_SHORTCUTS]: "shortcuts",
+    [KEY_BACKGROUND_IMAGE]: "backgroundImage",
   };
   // Same-process writes still fire onChange immediately; cross-window writes
   // arrive via the Tauri event emitted by writePref().

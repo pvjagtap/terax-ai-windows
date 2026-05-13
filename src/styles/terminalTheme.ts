@@ -88,13 +88,26 @@ export const lightSyntaxPalette = {
  * Builds an xterm theme at runtime from the current app tokens. Must be
  * called after the DOM is ready (after first paint); globals.css variables
  * are resolved via getComputedStyle.
+ *
+ * @param bgOpacity  0–1 opacity for the terminal background. Pass < 1 when
+ *                   a background image is active so the image shows through.
  */
-export function buildTerminalTheme(): ITheme {
+export function buildTerminalTheme(bgOpacity = 1): ITheme {
   const t = readAppTokens();
   const isDark = document.documentElement.classList.contains("dark");
   const ansi = isDark ? darkAnsi : lightAnsi;
+
+  let background = t.background;
+  if (bgOpacity < 1) {
+    // Convert resolved rgb(...) to rgba with requested opacity
+    const m = background.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (m) {
+      background = `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${bgOpacity})`;
+    }
+  }
+
   return {
-    background: t.background,
+    background,
     foreground: t.foreground,
     cursor: t.foreground,
     cursorAccent: t.background,
