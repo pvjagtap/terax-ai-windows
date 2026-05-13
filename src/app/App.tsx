@@ -94,7 +94,11 @@ export default function App() {
   const [activeEditorHandle, setActiveEditorHandle] =
     useState<EditorPaneHandle | null>(null);
   const sidebarRef = useRef<PanelImperativeHandle | null>(null);
-  const toggleSidebar = useCallback(() => {
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
+  const toggleLeftSidebar = useCallback(() => {
+    setLeftSidebarOpen((v) => !v);
+  }, []);
+  const toggleRightSidebar = useCallback(() => {
     const p = sidebarRef.current;
     if (!p) return;
     if (p.getSize().asPercentage <= 0) p.expand();
@@ -341,7 +345,7 @@ export default function App() {
       "search.focus": () => searchInlineRef.current?.focus(),
       "shortcuts.open": () => setShortcutsOpen((v) => !v),
       "settings.open": () => void openSettingsWindow(),
-      "sidebar.toggle": toggleSidebar,
+      "sidebar.toggle": toggleRightSidebar,
     }),
     [
       activeId,
@@ -353,7 +357,7 @@ export default function App() {
       selectByIndex,
       splitActivePaneInActiveTab,
       focusNextPaneInTab,
-      toggleSidebar,
+      toggleRightSidebar,
     ],
   );
 
@@ -447,7 +451,8 @@ export default function App() {
       <TooltipProvider>
         <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
           <Header
-            onToggleSidebar={toggleSidebar}
+            onToggleLeftSidebar={toggleLeftSidebar}
+            onToggleRightSidebar={toggleRightSidebar}
             onSplit={splitActivePaneInActiveTab}
             canSplit={
               activeTerminalTab !== null &&
@@ -460,17 +465,19 @@ export default function App() {
           />
 
           <main className="flex min-h-0 flex-1">
-            <VerticalTabBar
-              tabs={tabs}
-              activeId={activeId}
-              onSelect={setActiveId}
-              onNew={openNewTab}
-              onNewPrivate={openNewPrivateTab}
-              onNewPreview={() => openPreviewTab("")}
-              onNewEditor={() => setNewEditorOpen(true)}
-              onClose={handleClose}
-              onPin={pinTab}
-            />
+            {leftSidebarOpen && (
+              <VerticalTabBar
+                tabs={tabs}
+                activeId={activeId}
+                onSelect={setActiveId}
+                onNew={openNewTab}
+                onNewPrivate={openNewPrivateTab}
+                onNewPreview={() => openPreviewTab("")}
+                onNewEditor={() => setNewEditorOpen(true)}
+                onClose={handleClose}
+                onPin={pinTab}
+              />
+            )}
 
             <ResizablePanelGroup
               orientation="horizontal"

@@ -20,6 +20,7 @@ import {
   LayoutTwoRowIcon,
   Settings01Icon,
   SidebarLeftIcon,
+  SidebarRightIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
@@ -30,7 +31,8 @@ import {
 } from "./SearchInline";
 
 type Props = {
-  onToggleSidebar: () => void;
+  onToggleLeftSidebar: () => void;
+  onToggleRightSidebar: () => void;
   onSplit: (dir: "row" | "col") => void;
   canSplit: boolean;
   onOpenShortcuts: () => void;
@@ -42,7 +44,8 @@ type Props = {
 const COMPACT_WIDTH = 720;
 
 export function Header({
-  onToggleSidebar,
+  onToggleLeftSidebar,
+  onToggleRightSidebar,
   onSplit,
   canSplit,
   onOpenShortcuts,
@@ -116,8 +119,8 @@ export function Header({
     >
       <div className="flex shrink-0 items-center gap-0.5">
         <Button
-          onClick={onToggleSidebar}
-          title="Toggle sidebar"
+          onClick={onToggleLeftSidebar}
+          title="Toggle left sidebar"
           variant="ghost"
           size="icon-sm"
           className="shrink-0 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -191,6 +194,16 @@ export function Header({
       )}
 
       {!IS_MAC && settingsButton}
+
+      <Button
+        onClick={onToggleRightSidebar}
+        title="Toggle file explorer"
+        variant="ghost"
+        size="icon-sm"
+        className="shrink-0 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+      >
+        <HugeiconsIcon icon={SidebarRightIcon} size={18} strokeWidth={1.75} />
+      </Button>
 
       {USE_CUSTOM_WINDOW_CONTROLS && (
         <>
