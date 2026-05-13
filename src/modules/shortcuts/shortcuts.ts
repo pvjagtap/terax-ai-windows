@@ -19,8 +19,6 @@ export type ShortcutId =
   | "pane.focusPrev"
   | "search.focus"
   | "explorer.search"
-  | "ai.toggle"
-  | "ai.askSelection"
   | "shortcuts.open"
   | "settings.open"
   | "sidebar.toggle";
@@ -30,7 +28,6 @@ export type ShortcutGroup =
   | "Tabs"
   | "Panes"
   | "Search"
-  | "AI"
   | "View";
 
 export type KeyBinding = {
@@ -146,18 +143,6 @@ export const SHORTCUTS: Shortcut[] = [
     defaultBindings: [{ [MOD_PROP]: true, key: "f" }],
   },
   {
-    id: "ai.toggle",
-    label: "Toggle AI agent",
-    group: "AI",
-    defaultBindings: [{ [MOD_PROP]: true, key: "i" }],
-  },
-  {
-    id: "ai.askSelection",
-    label: "Ask AI about selection",
-    group: "AI",
-    defaultBindings: [{ [MOD_PROP]: true, key: "l" }],
-  },
-  {
     id: "sidebar.toggle",
     label: "Toggle file explorer",
     group: "View",
@@ -171,7 +156,6 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
   "Panes",
   "View",
   "Search",
-  "AI",
 ];
 
 /**

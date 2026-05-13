@@ -13,8 +13,6 @@ import {
   SHORTCUTS,
   type ShortcutId,
 } from "@/modules/shortcuts/shortcuts";
-import type { Tab } from "@/modules/tabs";
-import { TabBar } from "@/modules/tabs";
 import {
   GridViewIcon,
   KeyboardIcon,
@@ -32,19 +30,8 @@ import {
 } from "./SearchInline";
 
 type Props = {
-  tabs: Tab[];
-  activeId: number;
-  onSelect: (id: number) => void;
-  onNew: () => void;
-  onNewPrivate: () => void;
-  onNewPreview: () => void;
-  onNewEditor: () => void;
-  onClose: (id: number) => void;
-  /** Promote a preview (transient) tab to persistent. */
-  onPin: (id: number) => void;
   onToggleSidebar: () => void;
   onSplit: (dir: "row" | "col") => void;
-  /** Active tab is a terminal and below the per-tab pane cap. */
   canSplit: boolean;
   onOpenShortcuts: () => void;
   onOpenSettings: () => void;
@@ -55,15 +42,6 @@ type Props = {
 const COMPACT_WIDTH = 720;
 
 export function Header({
-  tabs,
-  activeId,
-  onSelect,
-  onNew,
-  onNewPrivate,
-  onNewPreview,
-  onNewEditor,
-  onClose,
-  onPin,
   onToggleSidebar,
   onSplit,
   canSplit,
@@ -200,18 +178,6 @@ export function Header({
         className="flex min-w-0 flex-1 items-center gap-2"
         data-tauri-drag-region
       >
-        <TabBar
-          tabs={tabs}
-          activeId={activeId}
-          onSelect={onSelect}
-          onNew={onNew}
-          onNewPrivate={onNewPrivate}
-          onNewPreview={onNewPreview}
-          onNewEditor={onNewEditor}
-          onClose={onClose}
-          onPin={onPin}
-          compact={compact}
-        />
         <div data-tauri-drag-region className="h-full min-w-2 flex-1" />
       </div>
 

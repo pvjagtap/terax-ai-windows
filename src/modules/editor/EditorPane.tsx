@@ -27,9 +27,6 @@ import { initVimGlobals, vimHandlersExtension } from "./lib/vim";
 initVimGlobals();
 import { resolveLanguage } from "./lib/languageResolver";
 import { useDocument } from "./lib/useDocument";
-import { inlineCompletion } from "./lib/autocomplete/inlineExtension";
-import { getKey } from "@/modules/ai/lib/keyring";
-import { onKeysChanged } from "@/modules/settings/store";
 
 export type EditorPaneHandle = {
   setQuery: (q: string) => void;
@@ -65,31 +62,7 @@ export const EditorPane = forwardRef<EditorPaneHandle, Props>(
     const editorThemeId = usePreferencesStore((s) => s.editorTheme);
     const vimMode = usePreferencesStore((s) => s.vimMode);
     const languageRef = useRef<string | null>(null);
-    const apiKeyRef = useRef<string | null>(null);
 
-    useEffect(() => {
-      let cancelled = false;
-      const refresh = async () => {
-        const provider = usePreferencesStore.getState().autocompleteProvider;
-        const k = await getKey(provider);
-        if (!cancelled) apiKeyRef.current = k;
-      };
-      void refresh();
-      let unlistenKeys: (() => void) | undefined;
-      void onKeysChanged(() => void refresh()).then((un) => {
-        unlistenKeys = un;
-      });
-      const unsubPrefs = usePreferencesStore.subscribe((state, prev) => {
-        if (state.autocompleteProvider !== prev.autocompleteProvider) {
-          void refresh();
-        }
-      });
-      return () => {
-        cancelled = true;
-        unlistenKeys?.();
-        unsubPrefs();
-      };
-    }, []);
     const themeExt = EDITOR_THEME_EXT[editorThemeId] ?? EDITOR_THEME_EXT.atomone;
 
     // Stabilize save + onSaved via refs so the extensions array never changes
@@ -123,20 +96,6 @@ export const EditorPane = forwardRef<EditorPaneHandle, Props>(
         })),
         ...buildSharedExtensions(),
         languageCompartment.of([]),
-        inlineCompletion({
-          getPrefs: () => {
-            const s = usePreferencesStore.getState();
-            return {
-              enabled: s.autocompleteEnabled,
-              provider: s.autocompleteProvider,
-              modelId: s.autocompleteModelId,
-              apiKey: apiKeyRef.current,
-              azureOpenaiEndpoint: s.azureOpenaiEndpoint,
-            };
-          },
-          getPath: () => pathRef.current,
-          getLanguage: () => languageRef.current,
-        }),
         keymap.of([
           {
             key: "Mod-s",

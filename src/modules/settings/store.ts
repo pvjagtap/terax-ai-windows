@@ -1,13 +1,5 @@
 import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import {
-  DEFAULT_AUTOCOMPLETE_MODEL,
-  DEFAULT_MODEL_ID,
-  AZURE_OPENAI_DEFAULT_ENDPOINT,
-  AZURE_CLAUDE_DEFAULT_ENDPOINT,
-  type AutocompleteProviderId,
-  type ModelId,
-} from "@/modules/ai/config";
 import type { KeyBinding, ShortcutId } from "@/modules/shortcuts/shortcuts";
 
 export type ThemePref = "system" | "light" | "dark";
@@ -40,18 +32,9 @@ export const EDITOR_THEME_LABELS: Record<EditorThemeId, string> = {
 
 export type Preferences = {
   theme: ThemePref;
-  defaultModelId: ModelId;
   editorTheme: EditorThemeId;
-  customInstructions: string;
   autostart: boolean;
   restoreWindowState: boolean;
-  autocompleteEnabled: boolean;
-  autocompleteProvider: AutocompleteProviderId;
-  autocompleteModelId: string;
-  azureOpenaiEndpoint: string;
-  azureClaudeEndpoint: string;
-  favoriteModelIds: string[];
-  recentModelIds: string[];
   vimMode: boolean;
   showHidden: boolean;
   terminalWebglEnabled: boolean;
@@ -61,18 +44,9 @@ export type Preferences = {
 
 const STORE_PATH = "terax-settings.json";
 const KEY_THEME = "theme";
-const KEY_DEFAULT_MODEL = "defaultModelId";
 const KEY_EDITOR_THEME = "editorTheme";
-const KEY_CUSTOM_INSTRUCTIONS = "customInstructions";
 const KEY_AUTOSTART = "autostart";
 const KEY_RESTORE_WINDOW = "restoreWindowState";
-const KEY_AUTOCOMPLETE_ENABLED = "autocompleteEnabled";
-const KEY_AUTOCOMPLETE_PROVIDER = "autocompleteProvider";
-const KEY_AUTOCOMPLETE_MODEL = "autocompleteModelId";
-const KEY_AZURE_OPENAI_ENDPOINT = "azureOpenaiEndpoint";
-const KEY_AZURE_CLAUDE_ENDPOINT = "azureClaudeEndpoint";
-const KEY_FAVORITE_MODELS = "favoriteModelIds";
-const KEY_RECENT_MODELS = "recentModelIds";
 const KEY_VIM_MODE = "vimMode";
 const KEY_SHOW_HIDDEN = "showHidden";
 const LEGACY_KEY_SHOW_HIDDEN_DIRS = "showHiddenDirectories";
@@ -90,20 +64,11 @@ export const TERMINAL_FONT_SIZES = [
 
 export const DEFAULT_PREFERENCES: Preferences = {
   theme: "system",
-  defaultModelId: DEFAULT_MODEL_ID,
   editorTheme: "atomone",
-  customInstructions: "",
   autostart: false,
   restoreWindowState: true,
-  autocompleteEnabled: false,
-  autocompleteProvider: "azure-openai",
-  autocompleteModelId: DEFAULT_AUTOCOMPLETE_MODEL["azure-openai"] ?? "",
-  azureOpenaiEndpoint: AZURE_OPENAI_DEFAULT_ENDPOINT,
-  azureClaudeEndpoint: AZURE_CLAUDE_DEFAULT_ENDPOINT,
-  favoriteModelIds: [],
-  recentModelIds: [],
   vimMode: false,
-  showHidden: false,
+  showHidden: true,
   terminalWebglEnabled: true,
   terminalFontSize: TERMINAL_FONT_SIZE_DEFAULT,
   shortcuts: {} as Record<ShortcutId, KeyBinding[]>,
@@ -131,35 +96,12 @@ export async function loadPreferences(): Promise<Preferences> {
   const get = <T>(k: string): T | undefined => map.get(k) as T | undefined;
   return {
     theme: get<ThemePref>(KEY_THEME) ?? DEFAULT_PREFERENCES.theme,
-    defaultModelId:
-      get<ModelId>(KEY_DEFAULT_MODEL) ?? DEFAULT_PREFERENCES.defaultModelId,
     editorTheme:
       get<EditorThemeId>(KEY_EDITOR_THEME) ?? DEFAULT_PREFERENCES.editorTheme,
-    customInstructions:
-      get<string>(KEY_CUSTOM_INSTRUCTIONS) ??
-      DEFAULT_PREFERENCES.customInstructions,
     autostart: get<boolean>(KEY_AUTOSTART) ?? DEFAULT_PREFERENCES.autostart,
     restoreWindowState:
       get<boolean>(KEY_RESTORE_WINDOW) ??
       DEFAULT_PREFERENCES.restoreWindowState,
-    autocompleteEnabled:
-      get<boolean>(KEY_AUTOCOMPLETE_ENABLED) ??
-      DEFAULT_PREFERENCES.autocompleteEnabled,
-    autocompleteProvider:
-      get<AutocompleteProviderId>(KEY_AUTOCOMPLETE_PROVIDER) ??
-      DEFAULT_PREFERENCES.autocompleteProvider,
-    autocompleteModelId:
-      get<string>(KEY_AUTOCOMPLETE_MODEL) ??
-      DEFAULT_PREFERENCES.autocompleteModelId,
-    azureOpenaiEndpoint:
-      get<string>(KEY_AZURE_OPENAI_ENDPOINT) ?? DEFAULT_PREFERENCES.azureOpenaiEndpoint,
-    azureClaudeEndpoint:
-      get<string>(KEY_AZURE_CLAUDE_ENDPOINT) ?? DEFAULT_PREFERENCES.azureClaudeEndpoint,
-    favoriteModelIds:
-      get<string[]>(KEY_FAVORITE_MODELS) ??
-      DEFAULT_PREFERENCES.favoriteModelIds,
-    recentModelIds:
-      get<string[]>(KEY_RECENT_MODELS) ?? DEFAULT_PREFERENCES.recentModelIds,
     vimMode: get<boolean>(KEY_VIM_MODE) ?? DEFAULT_PREFERENCES.vimMode,
     showHidden:
       get<boolean>(KEY_SHOW_HIDDEN) ??
@@ -181,16 +123,8 @@ export async function setTheme(value: ThemePref): Promise<void> {
   await writePref(KEY_THEME, value);
 }
 
-export async function setDefaultModel(value: ModelId): Promise<void> {
-  await writePref(KEY_DEFAULT_MODEL, value);
-}
-
 export async function setEditorTheme(value: EditorThemeId): Promise<void> {
   await writePref(KEY_EDITOR_THEME, value);
-}
-
-export async function setCustomInstructions(value: string): Promise<void> {
-  await writePref(KEY_CUSTOM_INSTRUCTIONS, value);
 }
 
 export async function setAutostart(value: boolean): Promise<void> {
@@ -199,36 +133,6 @@ export async function setAutostart(value: boolean): Promise<void> {
 
 export async function setRestoreWindowState(value: boolean): Promise<void> {
   await writePref(KEY_RESTORE_WINDOW, value);
-}
-
-export async function setAutocompleteEnabled(value: boolean): Promise<void> {
-  await writePref(KEY_AUTOCOMPLETE_ENABLED, value);
-}
-
-export async function setAutocompleteProvider(
-  value: AutocompleteProviderId
-): Promise<void> {
-  await writePref(KEY_AUTOCOMPLETE_PROVIDER, value);
-}
-
-export async function setAutocompleteModelId(value: string): Promise<void> {
-  await writePref(KEY_AUTOCOMPLETE_MODEL, value);
-}
-
-export async function setAzureOpenaiEndpoint(value: string): Promise<void> {
-  await writePref(KEY_AZURE_OPENAI_ENDPOINT, value);
-}
-
-export async function setAzureClaudeEndpoint(value: string): Promise<void> {
-  await writePref(KEY_AZURE_CLAUDE_ENDPOINT, value);
-}
-
-export async function setFavoriteModelIds(value: string[]): Promise<void> {
-  await writePref(KEY_FAVORITE_MODELS, value);
-}
-
-export async function setRecentModelIds(value: string[]): Promise<void> {
-  await writePref(KEY_RECENT_MODELS, value);
 }
 
 export async function setVimMode(value: boolean): Promise<void> {
@@ -273,18 +177,9 @@ export async function onPreferencesChange(
 ): Promise<UnlistenFn> {
   const map: Record<string, PrefKey> = {
     [KEY_THEME]: "theme",
-    [KEY_DEFAULT_MODEL]: "defaultModelId",
     [KEY_EDITOR_THEME]: "editorTheme",
-    [KEY_CUSTOM_INSTRUCTIONS]: "customInstructions",
     [KEY_AUTOSTART]: "autostart",
     [KEY_RESTORE_WINDOW]: "restoreWindowState",
-    [KEY_AUTOCOMPLETE_ENABLED]: "autocompleteEnabled",
-    [KEY_AUTOCOMPLETE_PROVIDER]: "autocompleteProvider",
-    [KEY_AUTOCOMPLETE_MODEL]: "autocompleteModelId",
-    [KEY_AZURE_OPENAI_ENDPOINT]: "azureOpenaiEndpoint",
-    [KEY_AZURE_CLAUDE_ENDPOINT]: "azureClaudeEndpoint",
-    [KEY_FAVORITE_MODELS]: "favoriteModelIds",
-    [KEY_RECENT_MODELS]: "recentModelIds",
     [KEY_VIM_MODE]: "vimMode",
     [KEY_SHOW_HIDDEN]: "showHidden",
     [KEY_TERMINAL_WEBGL_ENABLED]: "terminalWebglEnabled",
@@ -310,14 +205,4 @@ export async function onPreferencesChange(
   };
 }
 
-// API key changes are stored in OS keychain (not the prefs store),
-// so we broadcast via a Tauri event for cross-window listeners.
-const KEYS_CHANGED_EVENT = "terax://ai-keys-changed";
 
-export async function emitKeysChanged(): Promise<void> {
-  await emit(KEYS_CHANGED_EVENT);
-}
-
-export function onKeysChanged(cb: () => void): Promise<UnlistenFn> {
-  return listen(KEYS_CHANGED_EVENT, () => cb());
-}

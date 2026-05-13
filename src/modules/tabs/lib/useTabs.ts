@@ -46,23 +46,7 @@ export type PreviewTab = {
   url: string;
 };
 
-export type AiDiffStatus = "pending" | "approved" | "rejected";
-
-export type AiDiffTab = {
-  id: number;
-  kind: "ai-diff";
-  title: string;
-  path: string;
-  /** "" for newly created files. */
-  originalContent: string;
-  proposedContent: string;
-  /** Tool-call approval id used to resolve the AI SDK approval. */
-  approvalId: string;
-  status: AiDiffStatus;
-  isNewFile: boolean;
-};
-
-export type Tab = TerminalTab | EditorTab | PreviewTab | AiDiffTab;
+export type Tab = TerminalTab | EditorTab | PreviewTab;
 
 export type TabPatch = Partial<{
   title: string;
@@ -233,60 +217,6 @@ export function useTabs(initial?: Partial<TerminalTab>) {
       ),
     );
   }, []);
-
-  const openAiDiffTab = useCallback(
-    (input: {
-      path: string;
-      originalContent: string;
-      proposedContent: string;
-      approvalId: string;
-      isNewFile: boolean;
-    }) => {
-      let targetId: number | null = null;
-      setTabs((curr) => {
-        const existing = curr.find(
-          (t) => t.kind === "ai-diff" && t.approvalId === input.approvalId,
-        );
-        if (existing) {
-          targetId = existing.id;
-          return curr;
-        }
-        const id = nextIdRef.current++;
-        targetId = id;
-        const title = `${basename(input.path)} (AI diff)`;
-        return [
-          ...curr,
-          {
-            id,
-            kind: "ai-diff",
-            title,
-            path: input.path,
-            originalContent: input.originalContent,
-            proposedContent: input.proposedContent,
-            approvalId: input.approvalId,
-            status: "pending",
-            isNewFile: input.isNewFile,
-          },
-        ];
-      });
-      if (targetId !== null) setActiveId(targetId);
-      return targetId as number | null;
-    },
-    [],
-  );
-
-  const setAiDiffStatus = useCallback(
-    (approvalId: string, status: AiDiffStatus) => {
-      setTabs((curr) =>
-        curr.map((t) =>
-          t.kind === "ai-diff" && t.approvalId === approvalId
-            ? { ...t, status }
-            : t,
-        ),
-      );
-    },
-    [],
-  );
 
   const newPreviewTab = useCallback((url: string) => {
     const id = nextIdRef.current++;
@@ -489,8 +419,6 @@ export function useTabs(initial?: Partial<TerminalTab>) {
     openFileTab,
     pinTab,
     newPreviewTab,
-    openAiDiffTab,
-    setAiDiffStatus,
     closeTab,
     updateTab,
     selectByIndex,

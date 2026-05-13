@@ -16,21 +16,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import {
-  AgentRunBridge,
-  AiInputBar,
-  AiMiniWindow,
-  getAllKeys,
-  hasAnyKey,
-  SelectionAskAi,
-  useChatStore,
-} from "@/modules/ai";
-import { AiInputBarConnect } from "@/modules/ai/components/AiInputBar";
-import { AiComposerProvider } from "@/modules/ai/lib/composer";
-import { redactSensitive } from "@/modules/ai/lib/redact";
-import { useAgentsStore } from "@/modules/ai/store/agentsStore";
-import { useSnippetsStore } from "@/modules/ai/store/snippetsStore";
-import {
-  AiDiffStack,
   EditorStack,
   NewEditorDialog,
   type EditorPaneHandle,
@@ -44,14 +29,13 @@ import {
 import { PreviewStack, type PreviewPaneHandle } from "@/modules/preview";
 import { openSettingsWindow } from "@/modules/settings/openSettingsWindow";
 import { usePreferencesStore } from "@/modules/settings/preferences";
-import { onKeysChanged } from "@/modules/settings/store";
 import {
   ShortcutsDialog,
   useGlobalShortcuts,
   type ShortcutHandlers,
 } from "@/modules/shortcuts";
 import { StatusBar } from "@/modules/statusbar";
-import { MAX_PANES_PER_TAB, useTabs, useWorkspaceCwd } from "@/modules/tabs";
+import { MAX_PANES_PER_TAB, useTabs, useWorkspaceCwd, VerticalTabBar } from "@/modules/tabs";
 import {
   disposeSession,
   hasLeaf,
@@ -64,7 +48,6 @@ import { ThemeProvider } from "@/modules/theme";
 import { UpdaterDialog } from "@/modules/updater";
 import { homeDir } from "@tauri-apps/api/path";
 import type { SearchAddon } from "@xterm/addon-search";
-import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 
@@ -79,8 +62,6 @@ export default function App() {
     openFileTab,
     pinTab,
     newPreviewTab,
-    openAiDiffTab,
-    setAiDiffStatus,
     closeTab,
     updateTab,
     selectByIndex,
@@ -131,80 +112,17 @@ export default function App() {
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [newEditorOpen, setNewEditorOpen] = useState(false);
-  const miniOpen = useChatStore((s) => s.mini.open);
-  const openMini = useChatStore((s) => s.openMini);
-  const focusInput = useChatStore((s) => s.focusInput);
-  const openPanel = useChatStore((s) => s.openPanel);
-  const panelOpen = useChatStore((s) => s.panelOpen);
-  const apiKeys = useChatStore((s) => s.apiKeys);
-  const setApiKeys = useChatStore((s) => s.setApiKeys);
-  const setSelectedModelId = useChatStore((s) => s.setSelectedModelId);
-  const setLive = useChatStore((s) => s.setLive);
-  const respondToApproval = useChatStore((s) => s.respondToApproval);
-  const hasComposer = hasAnyKey(apiKeys);
 
-  const [keysLoaded, setKeysLoaded] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    const reload = () => {
-      void getAllKeys().then((keys) => {
-        if (!alive) return;
-        setApiKeys(keys);
-        setKeysLoaded(true);
-      });
-    };
-    reload();
-    const unlistenP = onKeysChanged(reload);
-    return () => {
-      alive = false;
-      void unlistenP.then((fn) => fn());
-    };
-  }, [setApiKeys]);
-
-  // Hydrate the cross-window preference store and mirror the default model
-  // into chatStore so the dropdown reflects what the user picked in Settings.
+  // Hydrate the cross-window preference store.
   const initPrefs = usePreferencesStore((s) => s.init);
-  const prefDefaultModel = usePreferencesStore((s) => s.defaultModelId);
-  const prefsHydrated = usePreferencesStore((s) => s.hydrated);
   useEffect(() => {
     void initPrefs();
   }, [initPrefs]);
-  useEffect(() => {
-    if (!prefsHydrated) return;
-    setSelectedModelId(prefDefaultModel);
-  }, [prefsHydrated, prefDefaultModel, setSelectedModelId]);
-
-  const hydrateSessions = useChatStore((s) => s.hydrateSessions);
-  useEffect(() => {
-    void hydrateSessions();
-    void useAgentsStore.getState().hydrate();
-    void useSnippetsStore.getState().hydrate();
-  }, [hydrateSessions]);
 
   const activeTab = tabs.find((t) => t.id === activeId);
   const isTerminalTab = activeTab?.kind === "terminal";
   const isEditorTab = activeTab?.kind === "editor";
   const isPreviewTab = activeTab?.kind === "preview";
-  const isAiDiffTab = activeTab?.kind === "ai-diff";
-
-  // When an AI diff is approved (write_file applied to disk), reload any
-  // open editor tabs for that path so the user sees the new content. We
-  // track which approvalIds we've already handled to fire the reload only
-  // once per applied diff.
-  const appliedDiffsRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    for (const t of tabs) {
-      if (t.kind !== "ai-diff") continue;
-      if (t.status !== "approved") continue;
-      if (appliedDiffsRef.current.has(t.approvalId)) continue;
-      appliedDiffsRef.current.add(t.approvalId);
-      for (const e of tabs) {
-        if (e.kind !== "editor") continue;
-        if (e.path !== t.path) continue;
-        editorRefs.current.get(e.id)?.reload();
-      }
-    }
-  }, [tabs]);
 
   const { explorerRoot, inheritedCwdForNewTab } = useWorkspaceCwd(
     activeTab,
@@ -291,117 +209,6 @@ export default function App() {
     },
     [tabs, activeId, setActiveId],
   );
-
-  const captureActiveSelection = useCallback((): string | null => {
-    const t = tabs.find((x) => x.id === activeId);
-    if (!t) return null;
-    if (t.kind === "terminal") {
-      const lid = t.activeLeafId;
-      return terminalRefs.current.get(lid)?.getSelection() ?? null;
-    }
-    if (t.kind === "editor") {
-      return editorRefs.current.get(activeId)?.getSelection() ?? null;
-    }
-    return null;
-  }, [tabs, activeId]);
-
-  const togglePanelAndFocus = useCallback(() => {
-    if (!hasComposer) {
-      void openSettingsWindow("models");
-      return;
-    }
-    if (panelOpen) {
-      useChatStore.getState().closePanel();
-    } else {
-      openPanel();
-      focusInput(null);
-    }
-  }, [hasComposer, panelOpen, openPanel, focusInput]);
-
-  const attachSelection = useChatStore((s) => s.attachSelection);
-
-  const handleAttachFileToAgent = useCallback(
-    (path: string) => {
-      if (!hasComposer) {
-        void openSettingsWindow("models");
-        return;
-      }
-      // Dispatch a window event the composer listens for. Same pattern as
-      // selections — keeps file-explorer decoupled from the AI module.
-      window.dispatchEvent(
-        new CustomEvent<string>("terax:ai-attach-file", { detail: path }),
-      );
-      openPanel();
-      focusInput(null);
-    },
-    [hasComposer, openPanel, focusInput],
-  );
-
-  const askFromSelection = useCallback(() => {
-    if (!hasComposer) {
-      void openSettingsWindow("models");
-      return;
-    }
-    const selection = captureActiveSelection();
-    if (!selection || !selection.trim()) {
-      focusInput(null);
-      return;
-    }
-    const source: "terminal" | "editor" =
-      activeTab?.kind === "editor" ? "editor" : "terminal";
-    attachSelection(selection, source);
-  }, [
-    hasComposer,
-    captureActiveSelection,
-    focusInput,
-    attachSelection,
-    activeTab,
-  ]);
-
-  const [askPopup, setAskPopup] = useState<{ x: number; y: number } | null>(
-    null,
-  );
-
-  useEffect(() => {
-    const isInsideAi = (t: EventTarget | null) => {
-      const el = t as HTMLElement | null;
-      if (!el) return false;
-      return !!(
-        el.closest("[data-selection-ask-ai]") ||
-        el.closest("[data-ai-input-bar]") ||
-        el.closest("[data-ai-mini-window]")
-      );
-    };
-
-    const onDown = (e: MouseEvent) => {
-      if (isInsideAi(e.target)) return;
-      setAskPopup(null);
-    };
-    const onUp = (e: MouseEvent) => {
-      if (isInsideAi(e.target)) return;
-      // Defer one tick so xterm/CodeMirror finalize the selection.
-      setTimeout(() => {
-        const text = captureActiveSelection();
-        if (text && text.trim().length > 0) {
-          setAskPopup({ x: e.clientX, y: e.clientY });
-        } else {
-          setAskPopup(null);
-        }
-      }, 0);
-    };
-
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("mouseup", onUp);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("mouseup", onUp);
-    };
-  }, [captureActiveSelection]);
-
-  const onAskFromSelection = useCallback(() => {
-    askFromSelection();
-    setAskPopup(null);
-  }, [askFromSelection]);
 
   const openNewTab = useCallback(() => {
     newTab(inheritedCwdForNewTab());
@@ -532,8 +339,6 @@ export default function App() {
       "pane.focusNext": () => focusNextPaneInTab(activeId, 1),
       "pane.focusPrev": () => focusNextPaneInTab(activeId, -1),
       "search.focus": () => searchInlineRef.current?.focus(),
-      "ai.toggle": togglePanelAndFocus,
-      "ai.askSelection": askFromSelection,
       "shortcuts.open": () => setShortcutsOpen((v) => !v),
       "settings.open": () => void openSettingsWindow(),
       "sidebar.toggle": toggleSidebar,
@@ -548,8 +353,6 @@ export default function App() {
       selectByIndex,
       splitActivePaneInActiveTab,
       focusNextPaneInTab,
-      togglePanelAndFocus,
-      askFromSelection,
       toggleSidebar,
     ],
   );
@@ -639,65 +442,11 @@ export default function App() {
   const activeCwd =
     activeTab?.kind === "terminal" ? (activeTab.cwd ?? null) : null;
 
-  useEffect(() => {
-    const findCwd = () => {
-      const active = tabs.find((x) => x.id === activeId);
-      if (active?.kind === "terminal" && active.cwd) return active.cwd;
-      for (let i = tabs.length - 1; i >= 0; i--) {
-        const t = tabs[i];
-        if (t.kind === "terminal" && t.cwd) return t.cwd;
-      }
-      return explorerRoot ?? home ?? null;
-    };
-
-    setLive({
-      getCwd: findCwd,
-      getTerminalContext: () => {
-        const t = tabs.find((x) => x.id === activeId);
-        if (t?.kind !== "terminal") return null;
-        if (t.private) return null;
-        const buf = terminalRefs.current.get(t.activeLeafId)?.getBuffer(300);
-        return buf ? redactSensitive(buf) : null;
-      },
-      isActiveTerminalPrivate: () => {
-        const t = tabs.find((x) => x.id === activeId);
-        return t?.kind === "terminal" && t.private === true;
-      },
-      injectIntoActivePty: (text) => {
-        const t = tabs.find((x) => x.id === activeId);
-        if (t?.kind !== "terminal") return false;
-        const term = terminalRefs.current.get(t.activeLeafId);
-        if (!term) return false;
-        term.write(text);
-        term.focus();
-        return true;
-      },
-      getWorkspaceRoot: () => explorerRoot ?? home ?? null,
-      getActiveFile: () => {
-        const t = tabs.find((x) => x.id === activeId);
-        return t?.kind === "editor" ? t.path : null;
-      },
-      openPreview: (url: string) => {
-        openPreviewTab(url);
-        return true;
-      },
-    });
-  }, [setLive, activeId, tabs, explorerRoot, home, openPreviewTab]);
-
   const shell = (
     <ThemeProvider>
       <TooltipProvider>
         <div className="relative flex h-screen flex-col overflow-hidden bg-background text-foreground">
           <Header
-            tabs={tabs}
-            activeId={activeId}
-            onSelect={setActiveId}
-            onNew={openNewTab}
-            onNewPrivate={openNewPrivateTab}
-            onNewPreview={() => openPreviewTab("")}
-            onNewEditor={() => setNewEditorOpen(true)}
-            onClose={handleClose}
-            onPin={pinTab}
             onToggleSidebar={toggleSidebar}
             onSplit={splitActivePaneInActiveTab}
             canSplit={
@@ -710,32 +459,23 @@ export default function App() {
             searchRef={searchInlineRef}
           />
 
-          <main className="flex min-h-0 flex-1 flex-col">
+          <main className="flex min-h-0 flex-1">
+            <VerticalTabBar
+              tabs={tabs}
+              activeId={activeId}
+              onSelect={setActiveId}
+              onNew={openNewTab}
+              onNewPrivate={openNewPrivateTab}
+              onNewPreview={() => openPreviewTab("")}
+              onNewEditor={() => setNewEditorOpen(true)}
+              onClose={handleClose}
+              onPin={pinTab}
+            />
+
             <ResizablePanelGroup
               orientation="horizontal"
               className="min-h-0 flex-1"
             >
-              <ResizablePanel
-                id="sidebar"
-                panelRef={sidebarRef}
-                defaultSize="225px"
-                minSize="130px"
-                maxSize="450px"
-                collapsible
-                collapsedSize={0}
-              >
-                <div className="h-full border-r border-border/60 bg-card">
-                  <FileExplorer
-                    rootPath={explorerRoot}
-                    onOpenFile={handleOpenFile}
-                    onPathRenamed={handlePathRenamed}
-                    onPathDeleted={handlePathDeleted}
-                    onRevealInTerminal={cdInNewTab}
-                    onAttachToAgent={handleAttachFileToAgent}
-                  />
-                </div>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
               <ResizablePanel id="workspace" defaultSize="78%" minSize="30%">
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="relative min-h-0 flex-1">
@@ -785,43 +525,27 @@ export default function App() {
                         onUrlChange={handlePreviewUrl}
                       />
                     </div>
-                    <div
-                      className={cn(
-                        "absolute inset-0 px-3 pt-2 pb-2",
-                        !isAiDiffTab && "invisible pointer-events-none",
-                      )}
-                      aria-hidden={!isAiDiffTab}
-                    >
-                      <AiDiffStack
-                        tabs={tabs}
-                        activeId={activeId}
-                        onAccept={(id) => respondToApproval(id, true)}
-                        onReject={(id) => respondToApproval(id, false)}
-                      />
-                    </div>
                   </div>
-
-                  {keysLoaded ? (
-                    <motion.div
-                      data-ai-input-bar
-                      initial={false}
-                      animate={{
-                        height: panelOpen ? "auto" : 0,
-                        opacity: panelOpen ? 1 : 0,
-                      }}
-                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                      className="overflow-hidden"
-                      aria-hidden={!panelOpen}
-                    >
-                      {hasComposer ? (
-                        <AiInputBar />
-                      ) : (
-                        <AiInputBarConnect
-                          onAdd={() => void openSettingsWindow("models")}
-                        />
-                      )}
-                    </motion.div>
-                  ) : null}
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                id="sidebar"
+                panelRef={sidebarRef}
+                defaultSize="225px"
+                minSize="130px"
+                maxSize="450px"
+                collapsible
+                collapsedSize={0}
+              >
+                <div className="h-full border-l border-border/60 bg-card">
+                  <FileExplorer
+                    rootPath={explorerRoot}
+                    onOpenFile={handleOpenFile}
+                    onPathRenamed={handlePathRenamed}
+                    onPathDeleted={handlePathDeleted}
+                    onRevealInTerminal={cdInNewTab}
+                  />
                 </div>
               </ResizablePanel>
             </ResizablePanelGroup>
@@ -832,32 +556,7 @@ export default function App() {
             filePath={activeFilePath}
             home={home}
             onCd={sendCd}
-            onOpenMini={openMini}
-            hasComposer={hasComposer}
-            privateActive={
-              activeTab?.kind === "terminal" && activeTab.private === true
-            }
           />
-
-          {hasComposer ? (
-            <AgentRunBridge
-              openAiDiffTab={openAiDiffTab}
-              setAiDiffStatus={setAiDiffStatus}
-            />
-          ) : null}
-
-          <AnimatePresence>
-            {miniOpen && hasComposer ? <AiMiniWindow key="ai-mini" /> : null}
-            {askPopup ? (
-              <SelectionAskAi
-                key="ask-ai-popup"
-                x={askPopup.x}
-                y={askPopup.y}
-                onAsk={onAskFromSelection}
-                onDismiss={() => setAskPopup(null)}
-              />
-            ) : null}
-          </AnimatePresence>
 
           <ShortcutsDialog
             open={shortcutsOpen}
@@ -903,5 +602,5 @@ export default function App() {
     </ThemeProvider>
   );
 
-  return <AiComposerProvider>{shell}</AiComposerProvider>;
+  return shell;
 }

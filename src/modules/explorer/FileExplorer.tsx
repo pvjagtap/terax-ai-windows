@@ -31,7 +31,6 @@ type Props = {
   onPathRenamed?: (from: string, to: string) => void;
   onPathDeleted?: (path: string) => void;
   onRevealInTerminal?: (path: string) => void;
-  onAttachToAgent?: (path: string) => void;
 };
 
 function basename(path: string): string {
@@ -45,7 +44,6 @@ export function FileExplorer({
   onPathRenamed,
   onPathDeleted,
   onRevealInTerminal,
-  onAttachToAgent,
 }: Props) {
   const tree = useFileTree(rootPath, { onPathRenamed, onPathDeleted });
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -300,7 +298,6 @@ export function FileExplorer({
                       tree={tree}
                       onOpenFile={onOpenFile}
                       onRevealInTerminal={onRevealInTerminal}
-                      onAttachToAgent={onAttachToAgent}
                       selectedPath={selectedPath}
                       onSelectPath={setSelectedPath}
                     />
