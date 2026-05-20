@@ -33,6 +33,7 @@ globset = "0.4"
 shared_child = "1"
 git2 = "0.19"
 tokio = { version = "1", features = ["rt"] }
+tempfile = "3"
 tauri-plugin-log = "2"
 tauri-plugin-os = "2"
 tauri-plugin-store = "2"

@@ -1,8 +1,9 @@
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 use serde::Serialize;
+use tempfile::NamedTempFile;
 
 const MAX_READ_BYTES: u64 = 10 * 1024 * 1024; // 10 MB
 const BINARY_SNIFF_BYTES: usize = 8 * 1024;
@@ -73,41 +74,27 @@ pub fn fs_read_file(path: String) -> Result<ReadResult, String> {
     }
 }
 
-/// Atomic write: stage into a sibling temp file, then rename over the target.
-/// Prevents partial writes from leaving a half-saved file on crash/power loss.
+/// Atomic write via O_EXCL tempfile in the target's parent, then rename.
+/// The random suffix blocks pre-staged symlink attacks where a deterministic
+/// temp path (e.g. .file.terax.tmp) could be replaced with a symlink to
+/// redirect writes outside the approved target.
+fn write_atomic(target: &Path, content: &[u8]) -> std::io::Result<()> {
+    let parent = target.parent().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "path has no parent")
+    })?;
+    let mut tmp = NamedTempFile::new_in(parent)?;
+    tmp.as_file_mut().write_all(content)?;
+    tmp.as_file_mut().sync_all()?;
+    tmp.persist(target).map_err(|e| e.error)?;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn fs_write_file(path: String, content: String) -> Result<(), String> {
     let target = PathBuf::from(&path);
-    let parent = target
-        .parent()
-        .ok_or_else(|| "path has no parent".to_string())?;
-    let file_name = target
-        .file_name()
-        .and_then(|s| s.to_str())
-        .ok_or_else(|| "path has no file name".to_string())?;
 
-    let tmp = parent.join(format!(".{file_name}.terax.tmp"));
-
-    {
-        let mut f = std::fs::File::create(&tmp).map_err(|e| {
-            log::debug!("fs_write_file create({}) failed: {e}", tmp.display());
-            e.to_string()
-        })?;
-        f.write_all(content.as_bytes()).map_err(|e| {
-            log::debug!("fs_write_file write({}) failed: {e}", tmp.display());
-            e.to_string()
-        })?;
-        f.sync_all().map_err(|e| e.to_string())?;
-    }
-
-    std::fs::rename(&tmp, &target).map_err(|e| {
-        log::warn!(
-            "fs_write_file rename({} -> {}) failed: {e}",
-            tmp.display(),
-            target.display()
-        );
-        // Best-effort cleanup of the staged temp.
-        let _ = std::fs::remove_file(&tmp);
+    write_atomic(&target, content.as_bytes()).map_err(|e| {
+        log::warn!("fs_write_file({}) failed: {e}", target.display());
         e.to_string()
     })?;
 
