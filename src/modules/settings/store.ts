@@ -52,6 +52,7 @@ export type Preferences = {
   restoreWindowState: boolean;
   vimMode: boolean;
   showHidden: boolean;
+  gitEnabled: boolean;
   terminalWebglEnabled: boolean;
   terminalFontSize: number;
   shortcuts: Record<ShortcutId, KeyBinding[]>;
@@ -66,6 +67,7 @@ const KEY_RESTORE_WINDOW = "restoreWindowState";
 const KEY_VIM_MODE = "vimMode";
 const KEY_SHOW_HIDDEN = "showHidden";
 const LEGACY_KEY_SHOW_HIDDEN_DIRS = "showHiddenDirectories";
+const KEY_GIT_ENABLED = "gitEnabled";
 const KEY_TERMINAL_WEBGL_ENABLED = "terminalWebglEnabled";
 const KEY_TERMINAL_FONT_SIZE = "terminalFontSize";
 const KEY_SHORTCUTS = "shortcuts";
@@ -86,6 +88,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   restoreWindowState: true,
   vimMode: false,
   showHidden: true,
+  gitEnabled: true,
   terminalWebglEnabled: true,
   terminalFontSize: TERMINAL_FONT_SIZE_DEFAULT,
   shortcuts: {} as Record<ShortcutId, KeyBinding[]>,
@@ -125,6 +128,8 @@ export async function loadPreferences(): Promise<Preferences> {
       get<boolean>(KEY_SHOW_HIDDEN) ??
       get<boolean>(LEGACY_KEY_SHOW_HIDDEN_DIRS) ??
       DEFAULT_PREFERENCES.showHidden,
+    gitEnabled:
+      get<boolean>(KEY_GIT_ENABLED) ?? DEFAULT_PREFERENCES.gitEnabled,
     terminalWebglEnabled:
       get<boolean>(KEY_TERMINAL_WEBGL_ENABLED) ??
       DEFAULT_PREFERENCES.terminalWebglEnabled,
@@ -162,6 +167,10 @@ export async function setVimMode(value: boolean): Promise<void> {
 
 export async function setShowHidden(value: boolean): Promise<void> {
   await writePref(KEY_SHOW_HIDDEN, value);
+}
+
+export async function setGitEnabled(value: boolean): Promise<void> {
+  await writePref(KEY_GIT_ENABLED, value);
 }
 
 export async function setTerminalWebglEnabled(value: boolean): Promise<void> {
@@ -209,6 +218,7 @@ export async function onPreferencesChange(
     [KEY_RESTORE_WINDOW]: "restoreWindowState",
     [KEY_VIM_MODE]: "vimMode",
     [KEY_SHOW_HIDDEN]: "showHidden",
+    [KEY_GIT_ENABLED]: "gitEnabled",
     [KEY_TERMINAL_WEBGL_ENABLED]: "terminalWebglEnabled",
     [KEY_TERMINAL_FONT_SIZE]: "terminalFontSize",
     [KEY_SHORTCUTS]: "shortcuts",

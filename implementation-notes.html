@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Git Client Integration — Implementation Notes</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --fg: #c9d1d9;
+      --fg-muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --purple: #bc8cff;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 2rem 1.5rem;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 { color: var(--accent); font-size: 1.75rem; margin-bottom: 0.5rem; }
+    h2 { color: var(--fg); font-size: 1.25rem; margin: 2rem 0 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+    h3 { color: var(--fg-muted); font-size: 1rem; margin: 1.25rem 0 0.5rem; }
+    p { margin-bottom: 0.75rem; }
+    .subtitle { color: var(--fg-muted); font-size: 0.9rem; margin-bottom: 2rem; }
+    .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-right: 0.5rem; }
+    .tag-decision { background: rgba(88, 166, 255, 0.15); color: var(--accent); }
+    .tag-deviation { background: rgba(248, 81, 73, 0.15); color: var(--red); }
+    .tag-tradeoff { background: rgba(210, 153, 34, 0.15); color: var(--yellow); }
+    .tag-question { background: rgba(188, 140, 255, 0.15); color: var(--purple); }
+    code { background: rgba(110, 118, 129, 0.2); padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+    ul { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    li { margin-bottom: 0.4rem; }
+    .file-list { font-family: monospace; font-size: 0.85rem; color: var(--fg-muted); }
+    .file-list li { margin-bottom: 0.2rem; }
+    table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; }
+    th, td { padding: 0.5rem 0.75rem; border: 1px solid var(--border); text-align: left; font-size: 0.85rem; }
+    th { background: rgba(110, 118, 129, 0.1); color: var(--fg-muted); }
+  </style>
+</head>
+<body>
+
+<h1>🔀 Git Client Integration — Implementation Notes</h1>
+<p class="subtitle">Terax AI Terminal • Sidebar Git Client • May 2025</p>
+
+<h2>Architecture Overview</h2>
+<div class="section">
+  <p>The Git client is built as a <strong>native Rust backend</strong> (via <code>git2</code> crate) with a <strong>React frontend</strong> integrated into the existing right sidebar panel. The right sidebar now has two tabs: <strong>Explorer</strong> and <strong>Git</strong>.</p>
+
+  <h3>Files Created</h3>
+  <ul class="file-list">
+    <li><strong>Backend:</strong> src-tauri/src/modules/git.rs — All git operations via libgit2</li>
+    <li><strong>Frontend API:</strong> src/modules/git/lib/api.ts — Typed Tauri invoke wrappers</li>
+    <li><strong>State Hook:</strong> src/modules/git/lib/useGitStatus.ts — Polling hook (3s interval)</li>
+    <li><strong>Components:</strong></li>
+    <li>&nbsp;&nbsp;src/modules/git/GitPanel.tsx — Main container with view switching</li>
+    <li>&nbsp;&nbsp;src/modules/git/GitBranchBar.tsx — Branch display & checkout dropdown</li>
+    <li>&nbsp;&nbsp;src/modules/git/GitCommitInput.tsx — Commit message textarea + button</li>
+    <li>&nbsp;&nbsp;src/modules/git/GitChanges.tsx — Staged/unstaged file list sections</li>
+    <li>&nbsp;&nbsp;src/modules/git/GitFileItem.tsx — Individual changed file row</li>
+    <li>&nbsp;&nbsp;src/modules/git/GitLogView.tsx — Commit history log</li>
+    <li>&nbsp;&nbsp;src/modules/git/GitEmpty.tsx — Empty/error state</li>
+    <li>&nbsp;&nbsp;src/modules/sidebar/SidebarPanel.tsx — Tabbed sidebar wrapper</li>
+  </ul>
+</div>
+
+<h2>Design Decisions</h2>
+
+<div class="section">
+  <span class="tag tag-decision">DECISION</span>
+  <h3>Native git2 over CLI shelling-out</h3>
+  <p>Used the <code>git2</code> Rust crate (libgit2 bindings) rather than shelling out to <code>git</code> CLI commands. This provides:</p>
+  <ul>
+    <li>No dependency on the user having git installed in PATH</li>
+    <li>Structured data without parsing text output</li>
+    <li>Better error handling and cross-platform consistency</li>
+    <li>No shell injection risk (security)</li>
+  </ul>
+  <p><strong>Tradeoff:</strong> ~5MB binary size increase from libgit2. No support for git hooks or .gitconfig aliases.</p>
+</div>
+
+<div class="section">
+  <span class="tag tag-decision">DECISION</span>
+  <h3>Sidebar tab placement (right panel, not left)</h3>
+  <p>The Git panel is tabbed within the <strong>right sidebar</strong> alongside the File Explorer, not added to the left VerticalTabBar. Reasoning:</p>
+  <ul>
+    <li>The left sidebar is a <strong>tab bar for workspace views</strong> (terminal/editor/preview) — a different conceptual layer</li>
+    <li>The right sidebar is the <strong>file-context panel</strong> — Git fits naturally here as it's about file state</li>
+    <li>VS Code uses this same pattern (Explorer + Source Control as sidebar tabs)</li>
+  </ul>
+</div>
+
+<div class="section">
+  <span class="tag tag-decision">DECISION</span>
+  <h3>Polling for status (3s interval)</h3>
+  <p>The git status is polled every 3 seconds rather than using file system watchers or IPC events.</p>
+  <ul>
+    <li>Simpler implementation, fewer edge cases</li>
+    <li>File watchers on large repos can be noisy and expensive</li>
+    <li>3s is responsive enough for interactive use without pegging CPU</li>
+    <li>Immediate refresh is triggered after any explicit git action (stage, commit, etc.)</li>
+  </ul>
+</div>
+
+<div class="section">
+  <span class="tag tag-decision">DECISION</span>
+  <h3>Inline SVG icons (no new icon library)</h3>
+  <p>Used inline SVGs for git-specific icons rather than adding another icon package. The existing app uses <code>@hugeicons/react</code> but it doesn't have specialized git icons (branch, merge, etc.). Inline SVGs keep the dependency footprint minimal.</p>
+</div>
+
+<h2>Deviations</h2>
+
+<div class="section">
+  <span class="tag tag-deviation">DEVIATION</span>
+  <h3>No push/pull/fetch from UI (intentional)</h3>
+  <p>Remote operations (push, pull, fetch) are <strong>not exposed in the UI</strong> despite the backend being capable. Reasons:</p>
+  <ul>
+    <li>These require SSH key or credential management which is complex</li>
+    <li>Terminal is right there — users can <code>git push</code> directly</li>
+    <li>Avoids silent network operations that might fail</li>
+    <li>Can be added later as a phase 2 feature</li>
+  </ul>
+</div>
+
+<div class="section">
+  <span class="tag tag-deviation">DEVIATION</span>
+  <h3>No inline diff viewer (yet)</h3>
+  <p>The diff API endpoints exist in the backend (<code>git_diff</code>, <code>git_diff_file</code>) but the frontend currently shows only the file list, not inline diffs. This keeps the initial implementation focused on the core workflow (status → stage → commit) while the diff infrastructure is ready for a future diff viewer component.</p>
+</div>
+
+<h2>Tradeoffs</h2>
+
+<div class="section">
+  <span class="tag tag-tradeoff">TRADEOFF</span>
+  <h3>git2 v0.19 vs v0.21</h3>
+  <table>
+    <tr><th>Option</th><th>Pros</th><th>Cons</th></tr>
+    <tr><td><strong>git2 0.19 ✓</strong></td><td>Well-tested, stable API, proven Windows support</td><td>Older libgit2 (1.8.1)</td></tr>
+    <tr><td>git2 0.21</td><td>Latest libgit2 features</td><td>May have breaking API changes, less battle-tested</td></tr>
+  </table>
+  <p>Chose 0.19 for stability. Cargo will pull it in automatically from the lock file.</p>
+</div>
+
+<div class="section">
+  <span class="tag tag-tradeoff">TRADEOFF</span>
+  <h3>Sidebar state management: local useState vs global store</h3>
+  <table>
+    <tr><th>Option</th><th>Pros</th><th>Cons</th></tr>
+    <tr><td><strong>Local useState ✓</strong></td><td>Simple, self-contained, no new dependencies</td><td>Tab state resets on sidebar collapse/expand</td></tr>
+    <tr><td>Zustand/global store</td><td>Persistent tab selection, shareable state</td><td>Over-engineering for a simple toggle</td></tr>
+  </table>
+  <p>Chose local state. The tab defaulting to "Explorer" on re-mount is acceptable UX.</p>
+</div>
+
+<div class="section">
+  <span class="tag tag-tradeoff">TRADEOFF</span>
+  <h3>Diff rendering approach: print() vs foreach()</h3>
+  <p>The <code>git2::Diff::foreach()</code> API takes 4 separate closures which causes Rust borrow-checker conflicts (multiple mutable borrows). Instead used <code>diff.print(DiffFormat::Patch)</code> with a single closure that handles all line types. This is slightly less ergonomic but compiles correctly.</p>
+</div>
+
+<h2>Open Questions</h2>
+
+<div class="section">
+  <span class="tag tag-question">QUESTION</span>
+  <h3>Should the active sidebar tab persist across sessions?</h3>
+  <p>Currently, the sidebar always starts on "Explorer" when the app opens. Should this be saved to the Tauri store and restored? Low priority but easy to add.</p>
+</div>
+
+<div class="section">
+  <span class="tag tag-question">QUESTION</span>
+  <h3>Discard all — should there be a confirmation dialog?</h3>
+  <p>Currently "Discard all changes" executes immediately. This is destructive and irreversible. Should we add a confirmation dialog? (Individual file discard also has no confirmation, matching VS Code's behavior of discard-on-click.)</p>
+</div>
+
+<div class="section">
+  <span class="tag tag-question">QUESTION</span>
+  <h3>Git log depth — 50 commits enough?</h3>
+  <p>The log view currently loads 50 commits. Should this be paginated/infinite-scroll, or is 50 a reasonable cap for a sidebar panel?</p>
+</div>
+
+<div class="section">
+  <span class="tag tag-question">QUESTION</span>
+  <h3>Should "Initialize Repository" be behind a confirmation?</h3>
+  <p>When no repo is detected, we show an "Initialize Repository" button. This creates a <code>.git</code> directory which could be surprising. Currently it's one-click.</p>
+</div>
+
+<h2>Git Commands Available</h2>
+<div class="section">
+  <table>
+    <tr><th>Command</th><th>Frontend Exposed</th><th>Description</th></tr>
+    <tr><td><code>git_status</code></td><td>✅</td><td>Branch, ahead/behind, changed files</td></tr>
+    <tr><td><code>git_stage</code></td><td>✅</td><td>Stage specific files</td></tr>
+    <tr><td><code>git_unstage</code></td><td>✅</td><td>Unstage specific files</td></tr>
+    <tr><td><code>git_stage_all</code></td><td>✅</td><td>Stage all changes</td></tr>
+    <tr><td><code>git_unstage_all</code></td><td>✅</td><td>Unstage all</td></tr>
+    <tr><td><code>git_commit</code></td><td>✅</td><td>Create commit with message</td></tr>
+    <tr><td><code>git_log</code></td><td>✅</td><td>Commit history (50 entries)</td></tr>
+    <tr><td><code>git_branches</code></td><td>✅</td><td>List local + remote branches</td></tr>
+    <tr><td><code>git_checkout_branch</code></td><td>✅</td><td>Switch branches</td></tr>
+    <tr><td><code>git_create_branch</code></td><td>Backend only</td><td>Create new branch</td></tr>
+    <tr><td><code>git_delete_branch</code></td><td>Backend only</td><td>Delete local branch</td></tr>
+    <tr><td><code>git_diff</code></td><td>Backend only</td><td>Full diff (staged or unstaged)</td></tr>
+    <tr><td><code>git_diff_file</code></td><td>Backend only</td><td>Per-file diff</td></tr>
+    <tr><td><code>git_discard_file</code></td><td>✅</td><td>Discard working tree changes</td></tr>
+    <tr><td><code>git_discard_all</code></td><td>✅</td><td>Discard all + clean untracked</td></tr>
+    <tr><td><code>git_stash_save</code></td><td>Backend only</td><td>Save stash</td></tr>
+    <tr><td><code>git_stash_list</code></td><td>Backend only</td><td>List stashes</td></tr>
+    <tr><td><code>git_stash_pop</code></td><td>Backend only</td><td>Pop stash</td></tr>
+    <tr><td><code>git_stash_drop</code></td><td>Backend only</td><td>Drop stash entry</td></tr>
+    <tr><td><code>git_remotes</code></td><td>Backend only</td><td>List remotes</td></tr>
+    <tr><td><code>git_init</code></td><td>✅</td><td>Initialize new repository</td></tr>
+    <tr><td><code>git_is_repo</code></td><td>✅</td><td>Check if path is a git repo</td></tr>
+  </table>
+  <p><em>"Backend only" commands have the Tauri IPC endpoint ready but no UI button yet — ready for future features.</em></p>
+</div>
+
+<h2>Performance Optimizations (Large Repo Support)</h2>
+
+<div class="section">
+  <span class="tag tag-decision">DECISION</span>
+  <h3>Adaptive polling interval based on repo size</h3>
+  <p>The <code>useGitStatus</code> hook now adapts its polling interval based on the number of entries returned:</p>
+  <ul>
+    <li><strong>&lt;100 entries:</strong> 3s (fast, same as before)</li>
+    <li><strong>100-500 entries:</strong> 8s (medium repos)</li>
+    <li><strong>500+ entries:</strong> 15s (large repos — prevents UI freeze from overlapping requests)</li>
+  </ul>
+  <p>Additionally: the <code>gitIsRepo()</code> check is now cached after the first successful confirmation and only re-checked if the path changes or git_status returns a "Not a git repository" error. This removes one redundant IPC call per poll tick.</p>
+  <p>An <code>inFlightRef</code> guard prevents overlapping requests — if a previous poll hasn't returned yet, the next tick is skipped entirely.</p>
+</div>
+
+<div class="section">
+  <span class="tag tag-decision">DECISION</span>
+  <h3>Conditional <code>recurse_untracked_dirs</code> in Rust backend</h3>
+  <p>The <code>git_status</code> command previously used <code>recurse_untracked_dirs(true)</code> unconditionally. On large repos with many untracked directories (e.g., build artifacts, node_modules not yet gitignored), this causes libgit2 to walk the <strong>entire file tree</strong> — potentially millions of files.</p>
+  <p><strong>New behavior:</strong> A fast first pass with <code>recurse_untracked_dirs(false)</code> is performed. If the result has &lt;300 entries, a second pass with full recursion is done for accurate listing. Large repos get the fast result (directories shown as single entries rather than expanded).</p>
+  <p><strong>Tradeoff:</strong> On large repos, untracked directories appear as collapsed folder entries (e.g., <code>build/</code>) rather than listing every file inside. This matches VS Code's behavior for performance.</p>
+</div>
+
+<div class="section">
+  <span class="tag tag-decision">DECISION</span>
+  <h3>Progressive rendering for file lists</h3>
+  <p>In list mode, only the first 100 files are rendered initially. A "Show more" button renders the next 200 at a time. This prevents DOM thrashing when a repo has thousands of changed files.</p>
+  <p>In tree mode, folders start <strong>collapsed by default</strong> when the entry count exceeds 200. This avoids rendering thousands of nested DOM nodes on mount.</p>
+</div>
+
+</body>
+</html>

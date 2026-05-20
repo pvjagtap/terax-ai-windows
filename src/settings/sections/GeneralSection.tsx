@@ -25,6 +25,7 @@ import {
   setEditorTheme,
   setRestoreWindowState,
   setShowHidden,
+  setGitEnabled,
   setTerminalFontSize,
   setTerminalWebglEnabled,
   setVimMode,
@@ -62,6 +63,7 @@ export function GeneralSection() {
   const restoreWindowState = usePreferencesStore((s) => s.restoreWindowState);
   const vimMode = usePreferencesStore((s) => s.vimMode);
   const showHidden = usePreferencesStore((s) => s.showHidden);
+  const gitEnabled = usePreferencesStore((s) => s.gitEnabled);
   const terminalWebglEnabled = usePreferencesStore(
     (s) => s.terminalWebglEnabled,
   );
@@ -226,6 +228,19 @@ export function GeneralSection() {
           <Switch
             checked={showHidden}
             onCheckedChange={(v) => void setShowHidden(v)}
+          />
+        </SettingRow>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label>Source Control</Label>
+        <SettingRow
+          title="Git integration"
+          description="Enable built-in Git status, staging, and commit. Disable to prevent any background git activity."
+        >
+          <Switch
+            checked={gitEnabled}
+            onCheckedChange={(v) => void setGitEnabled(v)}
           />
         </SettingRow>
       </div>

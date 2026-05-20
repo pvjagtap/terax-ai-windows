@@ -1,6 +1,6 @@
 mod modules;
 
-use modules::{fs, pty, secrets, shell};
+use modules::{fs, git, pty, secrets, shell};
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_window_state::StateFlags;
 
@@ -154,6 +154,29 @@ pub fn run() {
             secrets::secrets_set,
             secrets::secrets_delete,
             secrets::secrets_get_all,
+            git::git_status,
+            git::git_stage,
+            git::git_unstage,
+            git::git_stage_all,
+            git::git_unstage_all,
+            git::git_commit,
+            git::git_log,
+            git::git_branches,
+            git::git_diff,
+            git::git_diff_file,
+            git::git_checkout_branch,
+            git::git_create_branch,
+            git::git_delete_branch,
+            git::git_discard_file,
+            git::git_discard_all,
+            git::git_stash_save,
+            git::git_stash_list,
+            git::git_stash_pop,
+            git::git_stash_drop,
+            git::git_remotes,
+            git::git_init,
+            git::git_is_repo,
+            git::git_gitignore_add,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

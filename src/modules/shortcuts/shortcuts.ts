@@ -21,10 +21,7 @@ export type ShortcutId =
   | "explorer.search"
   | "shortcuts.open"
   | "settings.open"
-  | "sidebar.toggle"
-  | "view.zoomIn"
-  | "view.zoomOut"
-  | "view.zoomReset";
+  | "sidebar.toggle";
 
 export type ShortcutGroup =
   | "General"
@@ -150,24 +147,6 @@ export const SHORTCUTS: Shortcut[] = [
     label: "Toggle file explorer",
     group: "View",
     defaultBindings: [{ [MOD_PROP]: true, shift: true, key: "B" }],
-  },
-  {
-    id: "view.zoomIn",
-    label: "Zoom in",
-    group: "View",
-    defaultBindings: [{ [MOD_PROP]: true, shift: true, key: "+" }],
-  },
-  {
-    id: "view.zoomOut",
-    label: "Zoom out",
-    group: "View",
-    defaultBindings: [{ [MOD_PROP]: true, shift: true, key: "_" }],
-  },
-  {
-    id: "view.zoomReset",
-    label: "Reset zoom",
-    group: "View",
-    defaultBindings: [{ [MOD_PROP]: true, key: "0" }],
   },
 ];
 

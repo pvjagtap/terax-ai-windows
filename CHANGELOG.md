@@ -2,6 +2,19 @@
 
 All notable changes to Terax. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/) (pre-`1.0`, minor bumps may include breaking changes).
 
+## [0.7.1] — 2026
+
+### Fixed
+- Git panel freezing on large repositories (1min+ hangs eliminated)
+- `recurse_untracked_dirs` now conditional — fast first pass, full recursion only for small repos (<300 entries)
+- Polling overlap guard prevents request backlog when backend is slow
+- Redundant `gitIsRepo()` call removed from every poll tick (cached after first confirmation)
+
+### Changed
+- Adaptive polling: 3s (small) → 8s (medium) → 15s (large repos)
+- Progressive file list rendering: first 100 items shown, "Show more" for the rest
+- Tree view folders start collapsed by default on repos with 200+ changed entries
+
 ## [0.5.9] — 2026
 
 ## Added

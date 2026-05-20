@@ -20,7 +20,7 @@ import {
   NewEditorDialog,
   type EditorPaneHandle,
 } from "@/modules/editor";
-import { FileExplorer } from "@/modules/explorer";
+import { SidebarPanel } from "@/modules/sidebar";
 import {
   Header,
   type SearchInlineHandle,
@@ -29,11 +29,7 @@ import {
 import { PreviewStack, type PreviewPaneHandle } from "@/modules/preview";
 import { openSettingsWindow } from "@/modules/settings/openSettingsWindow";
 import { usePreferencesStore } from "@/modules/settings/preferences";
-import {
-  setTerminalFontSize,
-  TERMINAL_FONT_SIZE_MAX,
-  TERMINAL_FONT_SIZE_MIN,
-} from "@/modules/settings/store";
+
 import {
   ShortcutsDialog,
   useGlobalShortcuts,
@@ -400,13 +396,6 @@ export default function App() {
     handleClose(activeId);
   }, [activeId, closeActivePane, handleClose]);
 
-  const zoomBy = useCallback((delta: number) => {
-    const cur = usePreferencesStore.getState().terminalFontSize;
-    void setTerminalFontSize(
-      Math.min(TERMINAL_FONT_SIZE_MAX, Math.max(TERMINAL_FONT_SIZE_MIN, Math.round(cur + delta))),
-    );
-  }, []);
-
   const shortcutHandlers = useMemo<ShortcutHandlers>(
     () => ({
       "tab.new": openNewTab,
@@ -425,9 +414,6 @@ export default function App() {
       "shortcuts.open": () => setShortcutsOpen((v) => !v),
       "settings.open": () => void openSettingsWindow(),
       "sidebar.toggle": toggleRightSidebar,
-      "view.zoomIn": () => zoomBy(1),
-      "view.zoomOut": () => zoomBy(-1),
-      "view.zoomReset": () => void setTerminalFontSize(14),
     }),
     [
       activeId,
@@ -440,27 +426,10 @@ export default function App() {
       splitActivePaneInActiveTab,
       focusNextPaneInTab,
       toggleRightSidebar,
-      zoomBy,
     ],
   );
 
   useGlobalShortcuts(shortcutHandlers);
-
-  // Ctrl+scroll zoom (keyboard zoom handled by shortcut system above)
-  useEffect(() => {
-    const getSize = () => usePreferencesStore.getState().terminalFontSize;
-    const onWheel = (e: WheelEvent) => {
-      if (!(e.ctrlKey || e.metaKey)) return;
-      e.preventDefault();
-      const delta = e.deltaY < 0 ? 1 : -1;
-      const next = Math.round(getSize() + delta);
-      void setTerminalFontSize(
-        Math.min(TERMINAL_FONT_SIZE_MAX, Math.max(TERMINAL_FONT_SIZE_MIN, next)),
-      );
-    };
-    window.addEventListener("wheel", onWheel, { passive: false });
-    return () => window.removeEventListener("wheel", onWheel);
-  }, []);
 
   // Re-fit all terminals on window resize (catch edge-cases ResizeObserver misses)
   useEffect(() => {
@@ -669,7 +638,7 @@ export default function App() {
                 collapsedSize={0}
               >
                 <div className="h-full border-l border-border/60 bg-card">
-                  <FileExplorer
+                  <SidebarPanel
                     rootPath={explorerRoot}
                     onOpenFile={handleOpenFile}
                     onPathRenamed={handlePathRenamed}
