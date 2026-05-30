@@ -1,6 +1,6 @@
 mod modules;
 
-use modules::{fs, git, pty, secrets, shell};
+use modules::{fs, git, pty, secrets, shell, wallpaper};
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_window_state::StateFlags;
 
@@ -176,6 +176,7 @@ pub fn run() {
             git::git_init,
             git::git_is_repo,
             git::git_gitignore_add,
+            wallpaper::set_wallpaper_mode,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

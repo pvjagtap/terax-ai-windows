@@ -21,8 +21,10 @@ import {
   Settings01Icon,
   SidebarLeftIcon,
   SidebarRightIcon,
+  TvSmartIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   SearchInline,
@@ -64,8 +66,19 @@ export function Header({
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
+  const [wallpaperMode, setWallpaperMode] = useState(false);
   const userShortcuts = usePreferencesStore((s) => s.shortcuts);
   const now = useClock();
+
+  const toggleWallpaperMode = async () => {
+    const next = !wallpaperMode;
+    try {
+      await invoke("set_wallpaper_mode", { enable: next });
+      setWallpaperMode(next);
+    } catch (err) {
+      console.error("Wallpaper mode failed:", err);
+    }
+  };
 
   const tokensFor = (id: ShortcutId): string => {
     const s = SHORTCUTS.find((s) => s.id === id);
@@ -219,6 +232,18 @@ export function Header({
       )}
 
       {!IS_MAC && settingsButton}
+
+      <Button
+        onClick={() => void toggleWallpaperMode()}
+        title={wallpaperMode ? "Exit wallpaper mode" : "Wallpaper mode"}
+        variant="ghost"
+        size="icon-sm"
+        className={`shrink-0 rounded-md hover:bg-accent hover:text-foreground ${
+          wallpaperMode ? "text-yellow-400" : "text-muted-foreground"
+        }`}
+      >
+        <HugeiconsIcon icon={TvSmartIcon} size={16} strokeWidth={1.75} />
+      </Button>
 
       <Button
         onClick={onToggleRightSidebar}
