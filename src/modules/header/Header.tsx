@@ -30,6 +30,15 @@ import {
   type SearchTarget,
 } from "./SearchInline";
 
+function useClock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
 type Props = {
   onToggleLeftSidebar: () => void;
   onToggleRightSidebar: () => void;
@@ -56,6 +65,7 @@ export function Header({
   const rootRef = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
   const userShortcuts = usePreferencesStore((s) => s.shortcuts);
+  const now = useClock();
 
   const tokensFor = (id: ShortcutId): string => {
     const s = SHORTCUTS.find((s) => s.id === id);
@@ -178,10 +188,25 @@ export function Header({
       {IS_MAC && <span className="mr-1 h-full w-px shrink-0 bg-border" />}
 
       <div
-        className="flex min-w-0 flex-1 items-center gap-2"
+        className="flex min-w-0 flex-1 items-center justify-center gap-2"
         data-tauri-drag-region
       >
-        <div data-tauri-drag-region className="h-full min-w-2 flex-1" />
+        <span
+          data-tauri-drag-region
+          className="pointer-events-none font-mono text-[13px] font-medium text-black dark:text-yellow-400"
+        >
+          {now.toLocaleDateString(undefined, {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })}{" "}
+          {now.toLocaleTimeString(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        </span>
       </div>
 
       <SearchInline ref={searchRef} target={searchTarget} compact={compact} />

@@ -48,7 +48,6 @@ import {
   type TerminalPaneHandle,
 } from "@/modules/terminal";
 import { ThemeProvider } from "@/modules/theme";
-import { UpdaterDialog } from "@/modules/updater";
 import { homeDir } from "@tauri-apps/api/path";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import type { SearchAddon } from "@xterm/addon-search";
@@ -668,8 +667,6 @@ export default function App() {
             rootPath={explorerRoot ?? home}
             onCreated={(path) => openFileTab(path)}
           />
-
-          <UpdaterDialog />
 
           <AlertDialog
             open={pendingCloseTab !== null}
