@@ -25,6 +25,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   SearchInline,
@@ -79,6 +80,14 @@ export function Header({
       console.error("Wallpaper mode failed:", err);
     }
   };
+
+  // Listen for global hotkey toggle from backend (Ctrl+Alt+W)
+  useEffect(() => {
+    const unlisten = listen<boolean>("wallpaper-mode-changed", (event) => {
+      setWallpaperMode(event.payload);
+    });
+    return () => { void unlisten.then((fn) => fn()); };
+  }, []);
 
   const tokensFor = (id: ShortcutId): string => {
     const s = SHORTCUTS.find((s) => s.id === id);

@@ -178,6 +178,11 @@ pub fn run() {
             git::git_gitignore_add,
             wallpaper::set_wallpaper_mode,
         ])
+        .setup(|app| {
+            #[cfg(target_os = "windows")]
+            wallpaper::init_wallpaper(&app.handle().clone());
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
